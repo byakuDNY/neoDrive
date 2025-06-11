@@ -17,23 +17,23 @@ See [Vite Configuration Reference](https://vite.dev/config/).
 ## Project Setup
 
 ```sh
-pnpm install
+bun install
 ```
 
 ### Compile and Hot-Reload for Development
 
 ```sh
-pnpm dev
+bun dev
 ```
 
 ### Type-Check, Compile and Minify for Production
 
 ```sh
-pnpm build
+bun run build
 ```
 
 ### Lint with [ESLint](https://eslint.org/)
 
 ```sh
-pnpm lint
+bun lint
 ```
