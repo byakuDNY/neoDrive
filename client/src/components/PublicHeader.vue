@@ -1,22 +1,34 @@
 <script setup lang="ts">
-import { LayoutDashboard } from 'lucide-vue-next'
+import { LayoutDashboard, LogIn } from 'lucide-vue-next'
+import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppLogo from './AppLogo.vue'
 import ModeToggle from './ModeToggle.vue'
 import { Button } from './ui/button'
+
+const { showCallToAction = true } = defineProps<{
+  showCallToAction?: boolean
+}>()
+
+const session = ref(null)
 </script>
 
 <template>
-  <header class="fixed left-0 right-0 top-0 z-50 border-b border-border bg-background">
+  <header class="fixed left-0 right-0 top-0 z-50 border-b-4 border-border bg-background">
     <div class="mx-auto flex h-16 max-w-7xl justify-between px-4 sm:px-6 lg:px-8">
       <AppLogo />
 
       <div class="hidden space-x-4 sm:ml-6 sm:flex sm:items-center">
         <ModeToggle />
-        <Button asChild>
-          <RouterLink to="/dashboard" class="flex items-center space-x-2">
-            <LayoutDashboard class="h-4 w-4" />
+        <Button v-if="showCallToAction" asChild>
+          <RouterLink v-if="session" to="/dashboard" class="flex items-center space-x-2">
+            <LayoutDashboard />
             <span>Dashboard</span>
+          </RouterLink>
+
+          <RouterLink v-if="!session" to="/login" class="flex items-center space-x-2">
+            <LogIn />
+            <span>Login</span>
           </RouterLink>
         </Button>
       </div>
