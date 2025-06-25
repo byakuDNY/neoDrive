@@ -17,7 +17,7 @@ import PublicHeader from '@/components/PublicHeader.vue'
             <p class="text-lg">Your <span class="text-main">neo</span> cloud storage solution</p>
           </div>
         </div>
-        <AuthForm type="SIGNUP" />
+        <AuthForm type="LOGIN" />
       </div>
     </div>
 

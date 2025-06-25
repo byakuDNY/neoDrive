@@ -7,7 +7,18 @@ import { CLEANUP_INTERVAL, cleanupExpiredSessions } from "./src/lib/session.js";
 import { authRoutes } from "./src/routes/auth";
 
 const fastify = Fastify({
-  logger: true,
+  logger: {
+    serializers: {
+      req: function (req) {
+        return {
+          method: req.method,
+          url: req.url,
+          headers: req.headers,
+          body: req.body,
+        };
+      },
+    },
+  },
 });
 
 const startServer = async () => {

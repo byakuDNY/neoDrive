@@ -32,7 +32,7 @@ const props = defineProps<{
         <DropdownMenu>
           <DropdownMenuTrigger class="cursor-pointer" as-child>
             <Avatar class="size-10">
-              <AvatarImage :src="props.user.avatar" alt="User avatar" class="object-cover" />
+              <AvatarImage src="#" alt="User avatar" class="object-cover" />
               <AvatarFallback>{{ getInitials(props.user.name) }}</AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
@@ -40,7 +40,7 @@ const props = defineProps<{
             <DropdownMenuLabel>
               <div class="flex items-center gap-2 px-1 py-1.5">
                 <Avatar class="size-8 overflow-hidden rounded-full">
-                  <AvatarImage :src="props.user.avatar" alt="User avatar" class="object-cover" />
+                  <AvatarImage src="#" alt="User avatar" class="object-cover" />
                   <AvatarFallback class="">{{ getInitials(props.user.name) }}</AvatarFallback>
                 </Avatar>
                 <div class="flex flex-col text-left">

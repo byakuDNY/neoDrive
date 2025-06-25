@@ -6,9 +6,17 @@ import * as z from 'zod'
 import { Button } from '@/components/ui/button'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { useAuthStore } from '@/stores/auth'
+import { Icon } from '@iconify/vue'
 import { useForm } from 'vee-validate'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card'
+
+const router = useRouter()
+
+const submitError = ref('')
+const loading = ref(false)
 
 const props = defineProps<{
   type: 'SIGNUP' | 'LOGIN'
@@ -41,8 +49,38 @@ const form = useForm({
   validationSchema: formSchema,
 })
 
-const onSubmit = form.handleSubmit((values) => {
-  console.log(values)
+const onSubmit = form.handleSubmit(async (values) => {
+  loading.value = true
+  const authType = isSignup.value ? 'signup' : 'login'
+  try {
+    const response = await fetch(`http://localhost:3000/api/auth/${authType}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(values),
+    })
+
+    const { message, data: userData } = await response.json()
+    if (response.ok) {
+      if (!isSignup.value) {
+        let { setSession } = useAuthStore()
+        setSession(userData)
+        router.push('/dashboard')
+      } else {
+        router.push('/login')
+      }
+    } else {
+      submitError.value = message ?? 'An unexpected error occurred while processing your request'
+      console.error(response)
+    }
+  } catch (error) {
+    submitError.value = 'An unexpected error occurred while processing your request'
+    console.error(error)
+  } finally {
+    loading.value = false
+  }
 })
 </script>
 
@@ -56,7 +94,11 @@ const onSubmit = form.handleSubmit((values) => {
     </CardHeader>
 
     <CardContent>
-      <form class="space-y-6" @submit="onSubmit" @change="() => console.log(form.errors.value)">
+      <form
+        class="space-y-6"
+        @submit.prevent="onSubmit"
+        @change="() => console.log(form.errors.value)"
+      >
         <FormField
           v-if="isSignup"
           v-slot="{ componentField }"
@@ -66,7 +108,12 @@ const onSubmit = form.handleSubmit((values) => {
           <FormItem>
             <FormLabel>Name</FormLabel>
             <FormControl>
-              <Input type="text" placeholder="Jane Doe" v-bind="componentField" />
+              <Input
+                type="text"
+                placeholder="Jane Doe"
+                v-bind="componentField"
+                autocomplete="name"
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -76,7 +123,12 @@ const onSubmit = form.handleSubmit((values) => {
           <FormItem>
             <FormLabel>Email</FormLabel>
             <FormControl>
-              <Input type="email" placeholder="jane@example.com" v-bind="componentField" />
+              <Input
+                type="email"
+                placeholder="jane@example.com"
+                v-bind="componentField"
+                autocomplete="email"
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -90,7 +142,7 @@ const onSubmit = form.handleSubmit((values) => {
           <FormItem>
             <FormLabel>Password</FormLabel>
             <FormControl>
-              <Input type="password" v-bind="componentField" />
+              <Input type="password" v-bind="componentField" autocomplete="current-password" />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -105,12 +157,24 @@ const onSubmit = form.handleSubmit((values) => {
           <FormItem>
             <FormLabel>Confirm Password</FormLabel>
             <FormControl>
-              <Input type="password" v-bind="componentField" />
+              <Input type="password" v-bind="componentField" autocomplete="current-password" />
             </FormControl>
             <FormMessage />
           </FormItem>
         </FormField>
-        <Button type="submit" class="w-full">{{ isSignup ? 'Sign up' : 'Login' }}</Button>
+
+        <Button type="submit" :disabled="loading" class="w-full">
+          <span v-if="loading" class="flex items-center space-x-2">
+            <Icon icon="fa6-solid:spinner" class="animate-spin" />
+            <span>Loading...</span>
+          </span>
+
+          <span v-else>{{ isSignup ? 'Sign up' : 'Login' }}</span>
+        </Button>
+
+        <div v-if="submitError" class="text-center text-lg font-base text-red-500">
+          {{ submitError }}
+        </div>
       </form>
     </CardContent>
 

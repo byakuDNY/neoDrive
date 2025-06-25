@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { useAuthStore } from '@/stores/auth'
 import { LayoutDashboard, LogIn } from 'lucide-vue-next'
-import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppLogo from './AppLogo.vue'
 import ModeToggle from './ModeToggle.vue'
@@ -10,7 +10,7 @@ const { showCallToAction = true } = defineProps<{
   showCallToAction?: boolean
 }>()
 
-const session = ref(null)
+const { session } = useAuthStore()
 </script>
 
 <template>

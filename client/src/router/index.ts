@@ -1,3 +1,4 @@
+import { useAuthStore } from '@/stores/auth'
 import HomeView from '@/views/HomeView.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 
@@ -5,26 +6,32 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
+      name: 'Home',
       path: '/',
       component: HomeView,
     },
     {
+      name: 'Login',
       path: '/login',
       component: () => import('../views/LoginView.vue'),
     },
     {
+      name: 'Signup',
       path: '/signup',
       component: () => import('../views/SignupView.vue'),
     },
     {
       path: '/dashboard',
       component: () => import('../views/dashboard/DashboardLayout.vue'),
+      meta: { requiresAuth: true },
       children: [
         {
+          name: 'Dashboard',
           path: '',
           component: () => import('../views/dashboard/DashboardView.vue'),
         },
         {
+          name: 'Images',
           path: 'images',
           component: () => import('../views/dashboard/ImagesView.vue'),
         },
@@ -41,6 +48,7 @@ const router = createRouter({
         //   component: () => import('../views/dashboard/OthersView.vue'),
         // },
         {
+          name: 'Favorites',
           path: 'favorites',
           component: () => import('../views/dashboard/FavoritesView.vue'),
         },
@@ -51,6 +59,18 @@ const router = createRouter({
       ],
     },
   ],
+})
+
+router.beforeEach((to, from, next) => {
+  const { isAuthenticated } = useAuthStore()
+
+  if ((to.name === 'Login' || to.name === 'Signup') && isAuthenticated) {
+    next({ name: 'Dashboard' })
+  } else if (to.meta.requiresAuth && !isAuthenticated) {
+    next({ name: 'Login' })
+  } else {
+    next()
+  }
 })
 
 export default router
