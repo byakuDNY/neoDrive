@@ -26,7 +26,7 @@ const startServer = async () => {
     await Database.connect();
 
     fastify.register(cors, {
-      origin: ["http://localhost:5173"],
+      origin: ["http://localhost:5173", "https://neodrive-kappa.vercel.app"],
       credentials: true, // Important for cookies
     });
 

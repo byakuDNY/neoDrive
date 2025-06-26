@@ -53,7 +53,7 @@ const onSubmit = form.handleSubmit(async (values) => {
   loading.value = true
   const authType = isSignup.value ? 'signup' : 'login'
   try {
-    const response = await fetch(`http://localhost:3000/api/auth/${authType}`, {
+    const response = await fetch(`/api/auth/${authType}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -65,7 +65,7 @@ const onSubmit = form.handleSubmit(async (values) => {
     const { message, data: userData } = await response.json()
     if (response.ok) {
       if (!isSignup.value) {
-        let { setSession } = useAuthStore()
+        const { setSession } = useAuthStore()
         setSession(userData)
         router.push('/dashboard')
       } else {

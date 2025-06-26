@@ -22,11 +22,9 @@ export const useLogout = () => {
       if (response.ok) {
         console.info(data.message)
 
-        // Clear the session from store AFTER successful server response
         const { clearSession } = useAuthStore()
         clearSession()
 
-        // Navigate to login page
         await router.push('/login')
       } else {
         errorMessage.value = data.message || 'Logout failed'
@@ -35,7 +33,6 @@ export const useLogout = () => {
       errorMessage.value = 'Network error occurred'
       console.error('Logout error:', error)
 
-      // Even if the request fails, clear local session for security
       const { clearSession } = useAuthStore()
       clearSession()
       await router.push('/login')

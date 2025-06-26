@@ -17,7 +17,7 @@ const { session } = useAuthStore()
     <h1>Dashboard View</h1>
     <div class="space-y-4">
       <div>
-        <p>Logged in as {{ session.name }}</p>
+        <p>Logged in as {{ session!.name }}</p>
       </div>
     </div>
     <div>
