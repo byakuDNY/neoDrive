@@ -13,7 +13,7 @@ import PublicHeader from '@/components/PublicHeader.vue'
       <div class="container mx-auto px-4 py-8">
         <div class="text-center mb-8">
           <div class="space-y-2">
-            <h2 class="text-3xl">Welcome to NeoDrive</h2>
+            <h2 class="text-3xl">Welcome to neoDrive</h2>
             <p class="text-lg">Your <span class="text-main">neo</span> cloud storage solution</p>
           </div>
         </div>
@@ -34,7 +34,7 @@ import PublicHeader from '@/components/PublicHeader.vue'
                 class="w-full max-w-md mx-auto object-contain drop-shadow-lg drop-shadow-green-500"
               />
               <div class="space-y-2">
-                <h2 class="text-3xl">Welcome to NeoDrive</h2>
+                <h2 class="text-3xl">Welcome to neoDrive</h2>
                 <p class="text-lg">
                   Your <span class="text-main">neo</span> cloud storage solution
                 </p>
