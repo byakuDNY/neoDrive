@@ -1,10 +1,11 @@
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import Fastify from "fastify";
-import Database from "./src/config/database.js";
-import { checkBucketConnection } from "./src/config/minio.js";
+import Database from "./src/config/database";
+import { checkBucketConnection } from "./src/config/minio";
 import { CLEANUP_INTERVAL, cleanupExpiredSessions } from "./src/lib/session.js";
 import { authRoutes } from "./src/routes/auth";
+import { Multipart } from "@fastify/multipart";
 
 const fastify = Fastify({
   logger: {
