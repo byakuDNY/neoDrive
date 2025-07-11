@@ -1,5 +1,5 @@
 import { FastifyReply, FastifyRequest } from "fastify";
-import { nameChangeSchema, passwordChangeSchema } from "../lib/schemas";
+import { nameChangeSchema, passwordChangeSchema } from "../lib/user";
 import { getSession, sessions } from "../lib/session";
 import { User } from "../models/user";
 import { comparePassword, generateSalt, hashPassword } from "../lib/utils";
@@ -10,7 +10,7 @@ export const handleNameChange = async (
 ) => {
     const { success, data } = nameChangeSchema.safeParse(request.body);
     if (!success) {
-        return reply.status(400).send({ message: "Invalid data" });
+        return reply.status(400).send({ message: "Invalid name changing data" });
     }
     try {
         const session = getSession(request);
@@ -48,7 +48,7 @@ export const handlePasswordChange = async (
 ) => {
     const { success, data } = passwordChangeSchema.safeParse(request.body);
     if (!success) {
-        return reply.status(400).send({ message: "Invalid data" });
+        return reply.status(400).send({ message: "Invalid password changing data" });
     }
     try {
         const session = getSession(request);

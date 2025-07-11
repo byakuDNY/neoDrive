@@ -7,6 +7,7 @@ import { CLEANUP_INTERVAL, cleanupExpiredSessions } from "./src/lib/session.js";
 import { authRoutes } from "./src/routes/auth";
 import { Multipart } from "@fastify/multipart";
 import { userRoutes } from "./src/routes/user";
+import { stripeRoutes } from "./src/routes/stripe";
 
 const fastify = Fastify({
   logger: {
@@ -47,9 +48,11 @@ const startServer = async () => {
     fastify.register(authRoutes, {
       prefix: "/api/auth",
     });
-
     fastify.register(userRoutes, {
       prefix: "/api/user",
+    });
+    fastify.register(stripeRoutes, {
+      prefix: "/api/stripe",
     });
 
     await fastify.listen({
@@ -64,6 +67,7 @@ const startServer = async () => {
     console.log("   - CRUD /api/user");
     // console.log("   - CRUD /api/file");
     console.log("   - AUTH /api/auth");
+    console.log("   - STRIPE /api/stripe");
   } catch (err) {
     fastify.log.error(err);
     await Database.disconnect();
