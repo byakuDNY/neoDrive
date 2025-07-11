@@ -6,6 +6,7 @@ import { checkBucketConnection } from "./src/config/minio";
 import { CLEANUP_INTERVAL, cleanupExpiredSessions } from "./src/lib/session.js";
 import { authRoutes } from "./src/routes/auth";
 import { Multipart } from "@fastify/multipart";
+import { userRoutes } from "./src/routes/user";
 
 const fastify = Fastify({
   logger: {
@@ -26,6 +27,12 @@ const startServer = async () => {
   try {
     await Database.connect();
 
+    // const minioConnected = await checkBucketConnection();
+    // if (!minioConnected) {
+    //   await Database.disconnect();
+    //   process.exit(1);
+    // }
+
     fastify.register(cors, {
       origin: ["http://localhost:5173", "https://neodrive-kappa.vercel.app"],
       credentials: true, // Important for cookies
@@ -41,11 +48,9 @@ const startServer = async () => {
       prefix: "/api/auth",
     });
 
-    const minioConnected = await checkBucketConnection();
-    if (!minioConnected) {
-      await Database.disconnect();
-      process.exit(1);
-    }
+    fastify.register(userRoutes, {
+      prefix: "/api/user",
+    });
 
     await fastify.listen({
       port: 3000,
@@ -56,7 +61,7 @@ const startServer = async () => {
     console.log("🚀 Servidor Fastify corriendo en http://localhost:3000");
     console.log("📊 Endpoints disponibles:");
     console.log("   - GET  /");
-    // console.log("   - CRUD /api/user");
+    console.log("   - CRUD /api/user");
     // console.log("   - CRUD /api/file");
     console.log("   - AUTH /api/auth");
   } catch (err) {
