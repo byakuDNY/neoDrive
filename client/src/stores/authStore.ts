@@ -11,7 +11,6 @@ export const useAuthStore = defineStore(
     const setSession = (user: User | null) => {
       session.value = user
     }
-
     const clearSession = () => {
       session.value = null
     }

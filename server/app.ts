@@ -2,24 +2,18 @@ import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import Fastify from "fastify";
 import Database from "./src/config/database";
-import { checkBucketConnection } from "./src/config/minio";
+import { validateS3BucketAccess } from "./src/lib/s3Client";
 import { CLEANUP_INTERVAL, cleanupExpiredSessions } from "./src/lib/session.js";
-import { authRoutes } from "./src/routes/auth";
-import { Multipart } from "@fastify/multipart";
-import { userRoutes } from "./src/routes/user";
+import { authRoutes } from "./src/routes/authRoute";
+import { fileRoutes } from "./src/routes/fileRoute";
 import { stripeRoutes } from "./src/routes/stripe";
+import { userRoutes } from "./src/routes/user";
+
 
 const fastify = Fastify({
   logger: {
-    serializers: {
-      req: function (req) {
-        return {
-          method: req.method,
-          url: req.url,
-          headers: req.headers,
-          body: req.body,
-        };
-      },
+    transport: {
+      target: "pino-pretty",
     },
   },
 });
@@ -54,6 +48,21 @@ const startServer = async () => {
     fastify.register(stripeRoutes, {
       prefix: "/api/stripe",
     });
+    fastify.register(fileRoutes, {
+      prefix: "/api/file",
+    });
+
+    // const minioConnected = await checkBucketConnection();
+    // if (!minioConnected) {
+    //   await Database.disconnect();
+    //   process.exit(1);
+    // }
+
+    const s3Connected = await validateS3BucketAccess();
+    if (!s3Connected) {
+      await Database.disconnect();
+      process.exit(1);
+    }
 
     await fastify.listen({
       port: 3000,
@@ -65,7 +74,7 @@ const startServer = async () => {
     console.log("📊 Endpoints disponibles:");
     console.log("   - GET  /");
     console.log("   - CRUD /api/user");
-    // console.log("   - CRUD /api/file");
+    console.log("   - CRUD /api/file");
     console.log("   - AUTH /api/auth");
     console.log("   - STRIPE /api/stripe");
   } catch (err) {

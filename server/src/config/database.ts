@@ -1,5 +1,6 @@
-import mongoose, { Connection } from 'mongoose';
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
+import mongoose, { Connection } from "mongoose";
+import { envConfig } from "../lib/envConfig";
 
 dotenv.config();
 
@@ -8,7 +9,7 @@ class Database {
   private options: mongoose.ConnectOptions;
 
   constructor() {
-    this.mongoUri = process.env.MONGODB_URI;
+    this.mongoUri = envConfig.MONGODB_URL;
     this.options = {
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
@@ -20,29 +21,30 @@ class Database {
   async connect(): Promise<void> {
     try {
       if (!this.mongoUri) {
-        throw new Error('MONGODB_URI is not defined in environment variables');
+        throw new Error("MONGODB_URI is not defined in environment variables");
       }
       await mongoose.connect(this.mongoUri, this.options);
-      console.log('🍃 Conectado a MongoDB exitosamente');
+      console.log("🍃 Conectado a MongoDB exitosamente");
       console.log(`📍 Base de datos: ${mongoose.connection.name}`);
 
-      mongoose.connection.on('error', (err) => {
-        console.error('❌ Error de conexión a MongoDB:', err);
+      mongoose.connection.on("error", (err) => {
+        console.error("❌ Error de conexión a MongoDB:", err);
       });
 
-      mongoose.connection.on('disconnected', () => {
-        console.log('🔌 Desconectado de MongoDB');
+      mongoose.connection.on("disconnected", () => {
+        console.log("🔌 Desconectado de MongoDB");
       });
 
-      process.on('SIGINT', () => {
+      process.on("SIGINT", () => {
         mongoose.connection.close().then(() => {
-          console.log('🔐 Conexión a MongoDB cerrada por terminación de la aplicación');
+          console.log(
+            "🔐 Conexión a MongoDB cerrada por terminación de la aplicación"
+          );
           process.exit(0);
         });
       });
-
     } catch (error) {
-      console.error('❌ Error al conectar con MongoDB:', error);
+      console.error("❌ Error al conectar con MongoDB:", error);
       process.exit(1);
     }
   }
@@ -50,9 +52,9 @@ class Database {
   async disconnect(): Promise<void> {
     try {
       await mongoose.disconnect();
-      console.log('🔌 Desconectado de MongoDB');
+      console.log("🔌 Desconectado de MongoDB");
     } catch (error) {
-      console.error('❌ Error al desconectar de MongoDB:', error);
+      console.error("❌ Error al desconectar de MongoDB:", error);
     }
   }
 

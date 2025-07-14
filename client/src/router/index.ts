@@ -1,5 +1,19 @@
-import { useAuthStore } from '@/stores/auth'
+import DashboardLayout from '@/layout/DashboardLayout.vue'
+import { useAuthStore } from '@/stores/authStore'
+import CategoryView from '@/views/dashboard/CategoryView.vue'
+import DashboardView from '@/views/dashboard/DashboardView.vue'
+import SubcriptionView from '@/views/dashboard/SubcriptionView.vue'
 import HomeView from '@/views/HomeView.vue'
+import LoginView from '@/views/LoginView.vue'
+import SignupView from '@/views/SignupView.vue'
+import {
+  CircleEllipsisIcon,
+  FileImageIcon,
+  FileMusicIcon,
+  FileTextIcon,
+  FileVideoIcon,
+  HeartIcon,
+} from 'lucide-vue-next'
 import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
@@ -13,49 +27,64 @@ const router = createRouter({
     {
       name: 'Login',
       path: '/login',
-      component: () => import('../views/LoginView.vue'),
+      component: LoginView,
     },
     {
       name: 'Signup',
       path: '/signup',
-      component: () => import('../views/SignupView.vue'),
+      component: SignupView,
     },
     {
       path: '/dashboard',
-      component: () => import('../views/dashboard/DashboardLayout.vue'),
+      component: DashboardLayout,
       meta: { requiresAuth: true },
       children: [
         {
-          name: 'Dashboard',
           path: '',
-          component: () => import('../views/dashboard/DashboardView.vue'),
+          name: 'Dashboard',
+          component: DashboardView,
         },
         {
-          name: 'Images',
           path: 'images',
-          component: () => import('../views/dashboard/ImagesView.vue'),
+          name: 'Images',
+          component: CategoryView,
+          props: { category: 'images', icon: FileImageIcon },
         },
-        // {
-        //   path: 'videos',
-        //   component: () => import('../views/dashboard/VideosView.vue'),
-        // },
-        // {
-        //   path: 'documents',
-        //   component: () => import('../views/dashboard/DocumentsView.vue'),
-        // },
-        // {
-        //   path: 'others',
-        //   component: () => import('../views/dashboard/OthersView.vue'),
-        // },
         {
-          name: 'Favorites',
-          path: 'favorites',
-          component: () => import('../views/dashboard/FavoritesView.vue'),
+          path: 'videos',
+          name: 'Videos',
+          component: CategoryView,
+          props: { category: 'videos', icon: FileVideoIcon },
         },
-        // {
-        //   path: 'subscriptions',
-        //   component: () => import('../views/dashboard/SubscriptionsView.vue'),
-        // }
+        {
+          path: 'audios',
+          name: 'Audios',
+          component: CategoryView,
+          props: { category: 'audios', icon: FileMusicIcon },
+        },
+        {
+          path: 'documents',
+          name: 'Documents',
+          component: CategoryView,
+          props: { category: 'documents', icon: FileTextIcon },
+        },
+        {
+          path: 'others',
+          name: 'Others',
+          component: CategoryView,
+          props: { category: 'others', icon: CircleEllipsisIcon },
+        },
+        {
+          path: 'favorites',
+          name: 'Favorites',
+          component: CategoryView,
+          props: { category: 'favorites', icon: HeartIcon },
+        },
+        {
+          path: 'subscriptions',
+          name: 'Subscriptions',
+          component: SubcriptionView,
+        },
       ],
     },
   ],

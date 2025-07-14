@@ -1,9 +1,9 @@
-import crypto from "crypto";
 import { FastifyReply, FastifyRequest } from "fastify";
+import { ulid } from "ulidx";
 import { loginSchema, signUpSchema } from "../lib/schemas";
 import { clearSession, createSession, getSession } from "../lib/session";
 import { comparePassword, generateSalt, hashPassword } from "../lib/utils";
-import { User } from "../models/user";
+import { User } from "../models/userModel";
 
 export const handleLogin = async (
   request: FastifyRequest,
@@ -41,7 +41,8 @@ export const handleLogin = async (
       },
     });
   } catch (error) {
-    throw error;
+    console.error("Error logging in:", error);
+    return reply.status(500).send({ message: "Failed to log in" });
   }
 };
 export const handleSignup = async (
@@ -63,7 +64,7 @@ export const handleSignup = async (
     const hashedPassword = hashPassword(data.password, randomSalt);
 
     await User.create({
-      id: `${data.name}-${crypto.randomUUID()}`,
+      id: `${data.name}-${ulid()}`,
       name: data.name,
       email: data.email,
       password: hashedPassword,
@@ -75,7 +76,8 @@ export const handleSignup = async (
       message: "User created successfully",
     });
   } catch (error) {
-    throw error;
+    console.error("Error creating user:", error);
+    return reply.status(500).send({ message: "Failed to create user" });
   }
 };
 
@@ -83,26 +85,22 @@ export const handleGetSession = (
   request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  try {
-    const session = getSession(request);
-    if (!session) {
-      return reply.status(401).send({
-        message: "Invalid session",
-      });
-    }
-
-    return reply.status(200).send({
-      message: "Session retrieved successfully",
-      data: {
-        id: session.id,
-        name: session.name,
-        email: session.email,
-        subscription: session.subscription,
-      },
+  const session = getSession(request);
+  if (!session) {
+    return reply.status(401).send({
+      message: "Invalid session",
     });
-  } catch (error) {
-    throw error;
   }
+
+  return reply.status(200).send({
+    message: "Session retrieved successfully",
+    data: {
+      id: session.id,
+      name: session.name,
+      email: session.email,
+      subscription: session.subscription,
+    },
+  });
 };
 export const handleLogout = (request: FastifyRequest, reply: FastifyReply) => {
   const { message } = clearSession(request, reply);

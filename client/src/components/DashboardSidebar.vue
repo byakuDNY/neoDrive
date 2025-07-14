@@ -1,13 +1,31 @@
 <script setup lang="ts">
 import { mainNavigation, secondaryNavigation } from '@/lib/constants'
-import { MenuIcon, XIcon } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { formatFileSize } from '@/lib/utils'
+import { useBucketStore } from '@/stores/bucketStore'
+import { AlertTriangle, HardDrive, MenuIcon, XIcon } from 'lucide-vue-next'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppLogo from './AppLogo.vue'
 import { Button } from './ui/button'
 
-const isCollapsed = ref(false)
+const SIDEBAR_COLLAPSED_KEY = 'is-sidebar-collapsed'
+
 const route = useRoute()
+const isCollapsed = ref(true)
+const { loadSubscriptionUsage, storageUsagePercentage, subscriptionUsage } = useBucketStore()
+
+onMounted(async () => {
+  const stored = localStorage.getItem(SIDEBAR_COLLAPSED_KEY)
+  if (stored !== null) {
+    isCollapsed.value = JSON.parse(stored)
+  }
+
+  await loadSubscriptionUsage()
+})
+
+watch(isCollapsed, (newValue) => {
+  localStorage.setItem(SIDEBAR_COLLAPSED_KEY, JSON.stringify(newValue))
+})
 
 const toggleSidebar = () => {
   isCollapsed.value = !isCollapsed.value
@@ -16,6 +34,18 @@ const toggleSidebar = () => {
 const isActiveRoute = (href: string) => {
   return route.path === href
 }
+
+const storagePercentage = computed(() => {
+  return Number(storageUsagePercentage)
+})
+
+const isStorageWarning = computed(() => {
+  return storagePercentage.value > 80
+})
+
+const isStorageCritical = computed(() => {
+  return storagePercentage.value > 95
+})
 </script>
 
 <template>
@@ -101,6 +131,119 @@ const isActiveRoute = (href: string) => {
             </li>
           </ul>
         </section>
+      </section>
+
+      <!-- Storage Section -->
+      <section class="p-2 border-t-2 border-border">
+        <div
+          v-if="subscriptionUsage"
+          class="bg-background border-2 border-border rounded-base shadow-shadow p-3"
+          :class="[
+            isStorageCritical ? 'border-red-500' : isStorageWarning ? 'border-yellow-500' : '',
+          ]"
+        >
+          <!-- Collapsed View -->
+          <div v-if="isCollapsed" class="flex justify-center">
+            <div class="relative">
+              <HardDrive
+                class="size-6"
+                :class="[
+                  isStorageCritical
+                    ? 'text-red-500'
+                    : isStorageWarning
+                      ? 'text-yellow-500'
+                      : 'text-main',
+                ]"
+              />
+              <AlertTriangle
+                v-if="isStorageWarning"
+                class="absolute -top-1 -right-1 size-3 text-red-500"
+              />
+            </div>
+          </div>
+
+          <!-- Expanded View -->
+          <div v-else class="space-y-2">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <HardDrive
+                  class="size-4"
+                  :class="[
+                    isStorageCritical
+                      ? 'text-red-500'
+                      : isStorageWarning
+                        ? 'text-yellow-500'
+                        : 'text-main',
+                  ]"
+                />
+                <span class="text-sm font-medium">Storage</span>
+              </div>
+              <AlertTriangle
+                v-if="isStorageWarning"
+                class="size-4"
+                :class="isStorageCritical ? 'text-red-500' : 'text-yellow-500'"
+              />
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div
+                class="h-2 rounded-full transition-all duration-300"
+                :class="[
+                  isStorageCritical ? 'bg-red-500' : isStorageWarning ? 'bg-yellow-500' : 'bg-main',
+                ]"
+                :style="{ width: `${Math.min(storagePercentage, 100)}%` }"
+              ></div>
+            </div>
+
+            <!-- Storage Text -->
+            <div class="text-xs text-foreground/70">
+              <div class="flex justify-between items-center">
+                <span>{{ formatFileSize(subscriptionUsage.totalUsedStorage) }}</span>
+                <span>{{ formatFileSize(subscriptionUsage.maxTotalStorage) }}</span>
+              </div>
+              <div class="text-center mt-1">
+                <span
+                  class="font-medium"
+                  :class="[
+                    isStorageCritical
+                      ? 'text-red-500'
+                      : isStorageWarning
+                        ? 'text-yellow-500'
+                        : 'text-main',
+                  ]"
+                >
+                  {{ storagePercentage.toFixed(1) }}% used
+                </span>
+              </div>
+            </div>
+
+            <!-- Warning Message -->
+            <div
+              v-if="isStorageWarning"
+              class="text-xs p-2 rounded-base"
+              :class="isStorageCritical ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700'"
+            >
+              <p v-if="isStorageCritical">⚠️ Storage almost full! Upgrade your plan.</p>
+              <p v-else>📊 Storage running low. Consider upgrading.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div v-else class="bg-background border-2 border-border rounded-base shadow-shadow p-3">
+          <div v-if="isCollapsed" class="flex justify-center">
+            <div class="size-6 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+          <div v-else class="space-y-2">
+            <div class="flex items-center gap-2">
+              <div class="size-4 bg-gray-200 rounded animate-pulse"></div>
+              <div class="h-4 bg-gray-200 rounded animate-pulse flex-1"></div>
+            </div>
+            <div class="h-2 bg-gray-200 rounded animate-pulse"></div>
+            <div class="h-3 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </div>
       </section>
     </div>
   </aside>

@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      maxlength: 255,
     },
     name: {
       type: String,
@@ -31,7 +32,7 @@ const userSchema = new mongoose.Schema(
     },
     subscription: {
       type: String,
-      enum: ["free", "pro"],
+      enum: ["free", "pro", "premium"],
       required: true,
     },
   },
@@ -43,4 +44,5 @@ const userSchema = new mongoose.Schema(
 
 export type IUser = mongoose.InferSchemaType<typeof userSchema>;
 export type UserDocument = mongoose.Document & IUser;
+export type SubscriptionPlan = "free" | "pro" | "premium";
 export const User = mongoose.model("User", userSchema);

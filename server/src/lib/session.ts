@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { FastifyReply, FastifyRequest } from "fastify";
-import { IUser } from "../models/user";
+import { IUser } from "../models/userModel";
 
 export const COOKIE_SESSION_KEY = "NEO_DRIVE_SESSION_ID";
 export const SESSION_EXPIRATION = 60 * 60 * 24 * 7; // 7 days
@@ -17,6 +17,8 @@ export const sessions = new Map<
     expiresAt: number;
   }
 >();
+
+export type Session = ReturnType<typeof sessions.get>;
 
 export const getSession = (request: FastifyRequest) => {
   const sessionId = request.cookies[COOKIE_SESSION_KEY];

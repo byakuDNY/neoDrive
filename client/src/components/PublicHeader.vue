@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore } from '@/stores/authStore'
 import { LayoutDashboard, LogIn } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import AppLogo from './AppLogo.vue'
@@ -10,7 +10,7 @@ const { showCallToAction = true } = defineProps<{
   showCallToAction?: boolean
 }>()
 
-const { session } = useAuthStore()
+const { isAuthenticated } = useAuthStore()
 </script>
 
 <template>
@@ -18,15 +18,15 @@ const { session } = useAuthStore()
     <div class="mx-auto flex h-16 max-w-7xl justify-between px-4 sm:px-6 lg:px-8">
       <AppLogo />
 
-      <div class="hidden space-x-4 sm:ml-6 sm:flex sm:items-center">
+      <div class="space-x-4 flex items-center">
         <ModeToggle />
-        <Button v-if="showCallToAction" asChild>
-          <RouterLink v-if="session" to="/dashboard" class="flex items-center space-x-2">
+        <Button v-show="showCallToAction" asChild>
+          <RouterLink v-if="isAuthenticated" to="/dashboard" class="flex items-center space-x-2">
             <LayoutDashboard />
             <span>Dashboard</span>
           </RouterLink>
 
-          <RouterLink v-if="!session" to="/login" class="flex items-center space-x-2">
+          <RouterLink v-if="!isAuthenticated" to="/login" class="flex items-center space-x-2">
             <LogIn />
             <span>Login</span>
           </RouterLink>

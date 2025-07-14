@@ -1,4 +1,4 @@
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore } from '@/stores/authStore'
 import { readonly, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -20,15 +20,15 @@ export const useLogout = () => {
       const data = await response.json()
 
       if (response.ok) {
-        console.info(data.message)
-
-        const { clearSession } = useAuthStore()
-        clearSession()
-
-        await router.push('/login')
-      } else {
         errorMessage.value = data.message || 'Logout failed'
       }
+
+      console.info(data.message)
+
+      const { clearSession } = useAuthStore()
+      clearSession()
+
+      router.push('/login')
     } catch (error) {
       errorMessage.value = 'Network error occurred'
       console.error('Logout error:', error)

@@ -6,7 +6,7 @@ import * as z from 'zod'
 import { Button } from '@/components/ui/button'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore } from '@/stores/authStore'
 import { Icon } from '@iconify/vue'
 import { useForm } from 'vee-validate'
 import { computed, ref } from 'vue'
@@ -18,12 +18,12 @@ const router = useRouter()
 const submitError = ref('')
 const loading = ref(false)
 
-const props = defineProps<{
+const { type } = defineProps<{
   type: 'SIGNUP' | 'LOGIN'
 }>()
 
 const isSignup = computed(() => {
-  return props.type === 'SIGNUP' ? true : false
+  return type === 'SIGNUP' ? true : false
 })
 
 const formSchema = toTypedSchema(
@@ -63,17 +63,17 @@ const onSubmit = form.handleSubmit(async (values) => {
     })
 
     const { message, data: userData } = await response.json()
-    if (response.ok) {
-      if (!isSignup.value) {
-        const { setSession } = useAuthStore()
-        setSession(userData)
-        router.push('/dashboard')
-      } else {
-        router.push('/login')
-      }
-    } else {
+    if (!response.ok) {
       submitError.value = message ?? 'An unexpected error occurred while processing your request'
       console.error(response)
+    }
+
+    if (!isSignup.value) {
+      const { setSession } = useAuthStore()
+      setSession(userData)
+      router.push('/dashboard')
+    } else {
+      router.push('/login')
     }
   } catch (error) {
     submitError.value = 'An unexpected error occurred while processing your request'

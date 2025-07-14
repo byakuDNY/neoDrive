@@ -4,9 +4,9 @@ import {
   handleLogin,
   handleLogout,
   handleSignup,
-} from "../controllers/auth";
+} from "../controllers/authController";
 import { sessions } from "../lib/session";
-import { User } from "../models/user";
+import { User } from "../models/userModel";
 
 export const authRoutes = async (fastify: FastifyInstance) => {
   fastify.post("/login", handleLogin);

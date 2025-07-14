@@ -7,16 +7,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import type { User } from '@/lib/types'
+import { useLogout } from '@/composables/useLogout'
 import { getInitials } from '@/lib/utils'
+import { useAuthStore } from '@/stores/authStore'
 import { LogOut } from 'lucide-vue-next'
+import { computed } from 'vue'
 import ModeToggle from './ModeToggle.vue'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 import { Input } from './ui/input'
 
-const props = defineProps<{
-  user: User
-}>()
+const authStore = useAuthStore()
+
+const session = computed(() => authStore.session)
+
+const { logout } = useLogout()
 </script>
 
 <template>
@@ -33,7 +37,7 @@ const props = defineProps<{
           <DropdownMenuTrigger class="cursor-pointer" as-child>
             <Avatar class="size-10">
               <AvatarImage src="#" alt="User avatar" class="object-cover" />
-              <AvatarFallback>{{ getInitials(props.user.name) }}</AvatarFallback>
+              <AvatarFallback>{{ getInitials(session?.name) }}</AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
           <DropdownMenuContent class="w-56" align="end">
@@ -41,11 +45,11 @@ const props = defineProps<{
               <div class="flex items-center gap-2 px-1 py-1.5">
                 <Avatar class="size-8 overflow-hidden rounded-full">
                   <AvatarImage src="#" alt="User avatar" class="object-cover" />
-                  <AvatarFallback class="">{{ getInitials(props.user.name) }}</AvatarFallback>
+                  <AvatarFallback class="">{{ getInitials(session?.name) }}</AvatarFallback>
                 </Avatar>
                 <div class="flex flex-col text-left">
-                  <span class="truncate text-base font-medium">{{ props.user.name }}</span>
-                  <span class="truncate text-xs">{{ props.user.email }}</span>
+                  <span class="truncate text-base font-medium">{{ session?.name }}</span>
+                  <span class="truncate text-xs">{{ session?.email }}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
@@ -55,7 +59,7 @@ const props = defineProps<{
             </DropdownMenuItem>
 
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem @click="logout">
               <LogOut className="mr-2" />
               <span>Log out</span>
             </DropdownMenuItem>
