@@ -21,7 +21,6 @@ interface Props {
 interface Emits {
   (e: 'cancel', id: string): void
   (e: 'dismiss'): void
-  (e: 'retry', id: string): void
 }
 
 const props = defineProps<Props>()
@@ -52,10 +51,6 @@ const handleCancel = (id: string) => {
   emit('cancel', id)
 }
 
-const handleRetry = (id: string) => {
-  emit('retry', id)
-}
-
 const handleDismiss = () => {
   emit('dismiss')
 }
@@ -69,14 +64,14 @@ const handleDismiss = () => {
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div class="flex items-center space-x-2">
-        <File class="size-5" />
+        <File />
         <h3 class="font-semibold">
           {{ isCompleted ? 'Upload Complete' : 'Uploading Files' }}
         </h3>
         <span class="text-sm text-gray-500"> ({{ completedCount }}/{{ uploads.length }}) </span>
       </div>
       <Button variant="neutral" size="sm" @click="handleDismiss">
-        <X class="size-4" />
+        <X />
       </Button>
     </div>
 
@@ -104,9 +99,9 @@ const handleDismiss = () => {
       >
         <!-- Status Icon -->
         <div class="flex-shrink-0">
-          <CheckCircle v-if="upload.status === 'completed'" class="size-4 text-green-500" />
-          <XCircle v-else-if="upload.status === 'error'" class="size-4 text-red-500" />
-          <Loader2 v-else class="size-4 animate-spin text-main" />
+          <CheckCircle v-if="upload.status === 'completed'" class="text-green-500" />
+          <XCircle v-else-if="upload.status === 'error'" class="text-red-500" />
+          <Loader2 v-else class="animate-spin text-main" />
         </div>
 
         <!-- File Info -->
@@ -143,35 +138,25 @@ const handleDismiss = () => {
           </div>
         </div>
 
-        <!-- Actions -->
-        <div class="flex-shrink-0">
-          <Button
-            v-if="upload.status === 'error'"
-            variant="neutral"
-            size="sm"
-            @click="handleRetry(upload.id)"
-          >
-            Retry
-          </Button>
-          <Button
-            v-else-if="upload.status === 'uploading' || upload.status === 'pending'"
-            variant="neutral"
-            size="sm"
-            @click="handleCancel(upload.id)"
-          >
-            Cancel
-          </Button>
-        </div>
+        <!-- Cancel Button -->
+        <Button
+          v-if="upload.status === 'uploading' || upload.status === 'pending'"
+          variant="neutral"
+          size="sm"
+          @click="handleCancel(upload.id)"
+        >
+          Cancel
+        </Button>
       </div>
     </div>
 
     <!-- Summary -->
     <div v-if="isCompleted" class="pt-2 border-t border-gray-200">
       <div class="flex items-center justify-between text-sm">
-        <span v-if="errorCount === 0" class="text-green-600">
+        <span v-if="errorCount === 0" class="text-green-500">
           All {{ uploads.length }} files uploaded successfully!
         </span>
-        <span v-else class="text-yellow-600">
+        <span v-else class="text-yellow-500">
           {{ completedCount }} uploaded, {{ errorCount }} failed
         </span>
         <Button variant="neutral" size="sm" @click="handleDismiss"> Dismiss </Button>

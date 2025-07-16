@@ -11,13 +11,8 @@ export const useBucketStore = defineStore('bucket', () => {
   })
 
   const storageUsagePercentage = computed(() => {
-    const totalUsed = subscriptionUsage.value?.totalUsedStorage
-    const maxTotal = subscriptionUsage.value?.maxTotalStorage
-    if (typeof totalUsed !== 'number' || typeof maxTotal !== 'number' || maxTotal === 0) {
-      return 0
-    }
-    const storagePercentage = (totalUsed / maxTotal) * 100
-    return storagePercentage.toFixed(2)
+    if (!subscriptionUsage.value) return 0
+    return subscriptionUsage.value.usagePercentage
   })
 
   const loadSubscriptionUsage = async () => {
@@ -26,14 +21,14 @@ export const useBucketStore = defineStore('bucket', () => {
         credentials: 'include',
       })
 
-      const data = await response.json()
+      const result = await response.json()
 
       if (!response.ok) {
-        console.error('Failed to load subscription info:', data.message)
+        console.error('Failed to load subscription info:', result.message)
         return
       }
 
-      subscriptionUsage.value = data
+      subscriptionUsage.value = result.data
     } catch (error) {
       console.error('Failed to load subscription info:', error)
     }

@@ -26,7 +26,7 @@ export const presignedUrlSchema = z.object({
 
 export const fileMetadataSchema = z.object({
   id: z.string().min(1).max(255).optional(),
-  s3Key: z.string().min(1).max(255).optional(),
+  s3Key: z.string().min(1).max(255).nullable(),
   userId: z.string().min(1).max(255),
   name: z.string().min(1).max(255),
   type: z.enum(["file", "folder"]),
@@ -34,4 +34,7 @@ export const fileMetadataSchema = z.object({
   mimeType: z.string().nullable(),
   path: z.string().min(1),
   isFavorited: z.boolean(),
+  category: z
+    .enum(["images", "videos", "audio", "documents", "others"])
+    .nullable(),
 });

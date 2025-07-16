@@ -1,33 +1,25 @@
-import type { FileMetadata, PresignedUrl } from '@/lib/types'
-import { getFileInfo, validateFile } from '@/lib/utils'
+import type { FileMetadata, PresignedUrl, UploadItem } from '@/lib/types'
+import { getFileInfo } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 import { useBucketStore } from '@/stores/bucketStore'
 import { useFileStore } from '@/stores/fileStore'
 import { ref } from 'vue'
 
-export interface UploadItem {
-  id: string
-  name: string
-  size: number
-  progress: number
-  status: 'pending' | 'uploading' | 'completed' | 'error'
-  error?: string
-  file: File
-}
-
 export const useUpload = () => {
   const { refetch } = useFileStore()
   const { session } = useAuthStore()
   const { loadSubscriptionUsage } = useBucketStore()
+
+  const uploads = ref<UploadItem[]>([])
   const isLoading = ref(false)
   const error = ref<string | null>(null)
-  const uploads = ref<UploadItem[]>([])
   const showProgress = ref(false)
 
   const handleUpload = async (
     currentPath: string,
     type: 'folder' | 'file',
-    files?: FileList | File[],
+    // files?: FileList | File[],
+    files?: FileList,
     folderName?: string,
   ) => {
     if (!session) {
@@ -49,17 +41,8 @@ export const useUpload = () => {
         return
       }
 
-      // Convert FileList to Array if needed
+      // Convert FileList to Array
       const fileArray = Array.from(files)
-
-      // Validate all files first
-      for (const file of fileArray) {
-        const { valid, error: validationError } = validateFile(file)
-        if (!valid) {
-          error.value = `${file.name}: ${validationError}`
-          return
-        }
-      }
 
       // Initialize upload tracking
       uploads.value = fileArray.map((file) => ({
@@ -67,7 +50,7 @@ export const useUpload = () => {
         name: file.name,
         size: file.size,
         progress: 0,
-        status: 'pending' as const,
+        status: 'pending',
         file,
       }))
       showProgress.value = true
@@ -90,13 +73,11 @@ export const useUpload = () => {
 
   const uploadSingleFile = async (currentPath: string, uploadItem: UploadItem) => {
     try {
-      // Update status to uploading
       uploadItem.status = 'uploading'
 
       const filePath =
         currentPath === '/' ? `/${uploadItem.file.name}` : `${currentPath}/${uploadItem.file.name}`
 
-      // Get presigned URL
       const presignedUrlData: PresignedUrl = {
         name: uploadItem.file.name,
         size: uploadItem.file.size,
@@ -111,7 +92,6 @@ export const useUpload = () => {
         uploadItem.progress = progress
       })
 
-      // Store metadata
       const fileMetadata: FileMetadata = {
         s3Key: uniqueKey,
         userId: session!.id,
@@ -229,7 +209,7 @@ export const useUpload = () => {
 
     const result = await response.json()
     if (!response.ok) {
-      throw new Error(result.message || 'Failed to store file metadata')
+      throw new Error(result.message ?? 'Failed to store file metadata')
     }
     return result
   }
@@ -238,19 +218,6 @@ export const useUpload = () => {
     const uploadIndex = uploads.value.findIndex((upload) => upload.id === id)
     if (uploadIndex !== -1) {
       uploads.value.splice(uploadIndex, 1)
-    }
-  }
-
-  const retryUpload = async (id: string) => {
-    const upload = uploads.value.find((upload) => upload.id === id)
-    if (upload) {
-      upload.status = 'pending'
-      upload.progress = 0
-      upload.error = undefined
-
-      // Get current path from the upload item (you might need to store this)
-      const currentPath = '/' // You might need to pass this or store it
-      await uploadSingleFile(currentPath, upload)
     }
   }
 
@@ -270,7 +237,6 @@ export const useUpload = () => {
     uploads,
     showProgress,
     cancelUpload,
-    retryUpload,
     dismissProgress,
     clearError,
   }

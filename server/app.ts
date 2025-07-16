@@ -7,8 +7,7 @@ import { CLEANUP_INTERVAL, cleanupExpiredSessions } from "./src/lib/session.js";
 import { authRoutes } from "./src/routes/authRoute";
 import { fileRoutes } from "./src/routes/fileRoute";
 import { stripeRoutes } from "./src/routes/stripe";
-import { userRoutes } from "./src/routes/user";
-
+import { userRoutes } from "./src/routes/userRoutes";
 
 const fastify = Fastify({
   logger: {
@@ -21,12 +20,6 @@ const fastify = Fastify({
 const startServer = async () => {
   try {
     await Database.connect();
-
-    // const minioConnected = await checkBucketConnection();
-    // if (!minioConnected) {
-    //   await Database.disconnect();
-    //   process.exit(1);
-    // }
 
     fastify.register(cors, {
       origin: ["http://localhost:5173", "https://neodrive-kappa.vercel.app"],
@@ -51,12 +44,6 @@ const startServer = async () => {
     fastify.register(fileRoutes, {
       prefix: "/api/file",
     });
-
-    // const minioConnected = await checkBucketConnection();
-    // if (!minioConnected) {
-    //   await Database.disconnect();
-    //   process.exit(1);
-    // }
 
     const s3Connected = await validateS3BucketAccess();
     if (!s3Connected) {

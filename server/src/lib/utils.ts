@@ -1,6 +1,5 @@
 import crypto from "crypto";
 import { File } from "../models/fileModel";
-import { Session } from "./session";
 
 export const hashPassword = (password: string, salt: string) => {
   try {
@@ -29,75 +28,9 @@ export const comparePassword = (
 };
 
 export const SUBSCRIPTION_LIMITS = {
-  free: {
-    maxFileSize: 30 * 1024 * 1024, // 30MB
-    maxTotalStorage: 100 * 1024 * 1024, // 100MB
-    allowedMimeTypes: [
-      "image/jpeg",
-      "image/png",
-      "image/gif",
-      "text/plain",
-      "application/pdf",
-    ],
-  },
-  pro: {
-    maxFileSize: 1024 * 1024 * 1024, // 1GB
-    maxTotalStorage: 5 * 1024 * 1024 * 1024, // 5GB
-    allowedMimeTypes: null, // null means all types allowed
-  },
-  premium: {
-    maxFileSize: 30 * 1024 * 1024 * 1024, // 30GB
-    maxTotalStorage: 100 * 1024 * 1024 * 1024, // 100GB
-    allowedMimeTypes: null, // null means all types allowed
-  },
-};
-
-export const checkSubscriptionLimits = async (
-  session: Session,
-  fileSize: number,
-  mimeType: string
-): Promise<{
-  success: boolean;
-  message?: string;
-}> => {
-  const subscriptionPlan = session!.subscription;
-  const limits =
-    SUBSCRIPTION_LIMITS[subscriptionPlan as keyof typeof SUBSCRIPTION_LIMITS];
-
-  // Check file size limit
-  if (fileSize > limits.maxFileSize) {
-    return {
-      success: false,
-      message: "File size exceeds limit",
-    };
-  }
-
-  // Check mimetype restrictions
-  if (limits.allowedMimeTypes && !limits.allowedMimeTypes.includes(mimeType)) {
-    return {
-      success: false,
-      message: "File type not allowed",
-    };
-  }
-
-  // Check total storage usage
-  const totalUsedStorage = await calculateUsedStorage(session!.id);
-
-  if (totalUsedStorage + fileSize > limits.maxTotalStorage) {
-    const remainingStorage = limits.maxTotalStorage - totalUsedStorage;
-    return {
-      success: false,
-      message: `Storage limit exceeded. Remaining space: ${(
-        remainingStorage /
-        1024 /
-        1024
-      ).toFixed(1)}MB`,
-    };
-  }
-
-  return {
-    success: true,
-  };
+  free: 200 * 1024 * 1024, // 200MB
+  pro: 10 * 1024 * 1024 * 1024, // 10GB
+  premium: 30 * 1024 * 1024 * 1024, // 30GB
 };
 
 export const calculateUsedStorage = async (userId: string) => {

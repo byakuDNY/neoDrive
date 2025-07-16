@@ -171,7 +171,7 @@ const handleManageBilling = () => {
         <div class="flex items-center justify-between">
           <div>
             <CardTitle class="flex items-center gap-2">
-              <HardDrive class="size-5" />
+              <HardDrive class="size-4" />
               Current Usage
             </CardTitle>
             <CardDescription>Your storage and plan details</CardDescription>
@@ -273,9 +273,9 @@ const handleManageBilling = () => {
 
           <CardHeader class="text-center">
             <CardTitle class="flex items-center justify-center gap-2">
-              <Zap v-if="key === 'free'" class="size-5" />
-              <TrendingUp v-else-if="key === 'pro'" class="size-5 text-blue-500" />
-              <Crown v-else class="size-5 text-yellow-500" />
+              <Zap v-if="key === 'free'" class="size-4" />
+              <TrendingUp v-else-if="key === 'pro'" class="size-4 text-blue-500" />
+              <Crown v-else class="size-4 text-yellow-500" />
               {{ plan.name }}
             </CardTitle>
             <div class="space-y-2">

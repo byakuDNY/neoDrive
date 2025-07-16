@@ -28,6 +28,7 @@ import {
   Upload,
   AlertCircle,
   X,
+  RefreshCcw,
 } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 
@@ -39,7 +40,6 @@ const {
   uploads,
   showProgress,
   cancelUpload,
-  retryUpload,
   dismissProgress,
   clearError,
 } = useUpload()
@@ -124,7 +124,6 @@ const handleFileChange = async (event: Event) => {
     } catch (error) {
       console.error('Upload failed:', error)
     } finally {
-      // Reset input value to allow selecting the same files again
       input.value = ''
     }
   }
@@ -167,31 +166,6 @@ watch(uploadError, (newError) => {
 
 <template>
   <section class="p-4 md:p-8">
-    <!-- Error Alert -->
-    <div
-      v-if="uploadError"
-      class="mb-4 p-4 bg-red-50 border-2 border-red-200 rounded-base shadow-shadow flex items-center justify-between"
-    >
-      <div class="flex items-center">
-        <AlertCircle class="text-red-500 mr-2 size-5" />
-        <span class="text-red-700">{{ uploadError }}</span>
-      </div>
-      <Button variant="neutral" size="sm" @click="clearError">
-        <X class="size-4" />
-      </Button>
-    </div>
-
-    <!-- Upload Progress -->
-    <div v-if="showProgress" class="mb-4">
-      <UploadProgress
-        :uploads="uploads"
-        :is-visible="showProgress"
-        @cancel="cancelUpload"
-        @retry="retryUpload"
-        @dismiss="dismissProgress"
-      />
-    </div>
-
     <!-- Header -->
     <section class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
       <div class="flex items-center space-x-4 mb-3">
@@ -205,30 +179,52 @@ watch(uploadError, (newError) => {
         </div>
       </div>
 
-      <Button @click="refetch">Refetch</Button>
-
       <div class="flex space-x-4">
-        <div class="flex flex-col space-y-2">
-          <CreateFolderDialog :is-uploading="isLoading" @submit="handleCreateFolder" />
-        </div>
-        <div class="flex flex-col space-y-2">
-          <input
-            ref="fileInputRef"
-            type="file"
-            multiple
-            accept="*/*"
-            @change="handleFileChange"
-            class="hidden"
-            :disabled="isLoading"
-          />
-          <Button @click="handleUploadClick" :disabled="isLoading">
-            <Loader2 v-if="isLoading" class="animate-spin mr-2 size-4" />
-            <Upload v-else class="mr-2 size-4" />
-            {{ isLoading ? 'Uploading...' : 'Upload Files' }}
-          </Button>
-        </div>
+        <Button @click="refetch">
+          <RefreshCcw />
+          Refetch</Button
+        >
+        <CreateFolderDialog :is-uploading="isLoading" @submit="handleCreateFolder" />
+        <input
+          ref="fileInputRef"
+          type="file"
+          multiple
+          accept="*/*"
+          @change="handleFileChange"
+          class="hidden"
+          :disabled="isLoading"
+        />
+        <Button @click="handleUploadClick" :disabled="isLoading">
+          <Loader2 v-if="isLoading" />
+          <Upload v-else />
+          {{ isLoading ? 'Uploading...' : 'Upload Files' }}
+        </Button>
       </div>
     </section>
+
+    <!-- Error Alert -->
+    <div
+      v-if="uploadError"
+      class="mb-4 p-4 bg-red-50 border-2 border-red-200 rounded-base shadow-shadow flex items-center justify-between"
+    >
+      <div class="flex items-center">
+        <AlertCircle class="text-red-500" />
+        <span class="text-red-700">{{ uploadError }}</span>
+      </div>
+      <Button variant="neutral" size="sm" @click="clearError">
+        <X />
+      </Button>
+    </div>
+
+    <!-- Upload Progress -->
+    <div v-if="showProgress" class="mb-4">
+      <UploadProgress
+        :uploads="uploads"
+        :is-visible="showProgress"
+        @cancel="cancelUpload"
+        @dismiss="dismissProgress"
+      />
+    </div>
 
     <!-- File Container -->
     <section
@@ -276,7 +272,7 @@ watch(uploadError, (newError) => {
         <h2>You don't have any files</h2>
         <p>Upload some files to get started</p>
         <Button @click="handleUploadClick" :disabled="isLoading">
-          <Upload class="mr-2 size-4" />
+          <Upload />
           Upload Files
         </Button>
       </section>
@@ -285,15 +281,9 @@ watch(uploadError, (newError) => {
       <section v-else class="divide-y-2 divide-border">
         <!-- Header Row -->
         <div class="grid grid-cols-12 gap-4 p-4 bg-secondary-background">
-          <div class="col-span-6 md:col-span-8">
-            <h2 class="font-semibold">Name</h2>
-          </div>
-          <div class="col-span-3 md:col-span-2 text-center">
-            <h2 class="font-semibold">Size</h2>
-          </div>
-          <div class="col-span-3 md:col-span-2 text-center">
-            <h2 class="font-semibold">Actions</h2>
-          </div>
+          <div class="col-span-6 md:col-span-8 font-semibold">Name</div>
+          <div class="col-span-3 md:col-span-2 text-center font-semibold">Size</div>
+          <div class="col-span-3 md:col-span-2 text-center font-semibold">Actions</div>
         </div>
 
         <!-- File/Folder Rows -->
@@ -310,7 +300,7 @@ watch(uploadError, (newError) => {
             >
               <component
                 :is="item.icon"
-                class="size-5"
+                class="size-4"
                 :class="{ 'text-main': item.type === 'file' }"
               />
             </div>
@@ -334,26 +324,23 @@ watch(uploadError, (newError) => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem v-if="item.type === 'file'" @click="handleViewDetails(item)">
-                  <Eye class="mr-2 size-4" />
+                  <Eye />
                   View Details
                 </DropdownMenuItem>
                 <DropdownMenuItem @click="">
-                  <FolderPen class="mr-2 size-4" />
+                  <FolderPen />
                   Rename
                 </DropdownMenuItem>
                 <DropdownMenuItem v-if="item.type === 'file'" @click="handleDownload(item)">
-                  <Download class="mr-2 size-4" />
+                  <Download />
                   Download
                 </DropdownMenuItem>
                 <DropdownMenuItem v-if="item.type === 'file'" @click="toggleFavorite(item.id)">
-                  <Heart
-                    class="mr-2 size-4"
-                    :class="{ 'fill-current text-red-500': item.isFavorited }"
-                  />
+                  <Heart :class="{ 'fill-current text-red-500': item.isFavorited }" />
                   {{ item.isFavorited ? 'Remove from Favorites' : 'Add to Favorites' }}
                 </DropdownMenuItem>
                 <DropdownMenuItem @click="handleDelete(item)" class="text-red-500">
-                  <Trash2 class="mr-2 size-4" />
+                  <Trash2 />
                   Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -398,7 +385,7 @@ watch(uploadError, (newError) => {
               {{ new Date(selectedFile.updatedAt).toLocaleDateString() }}
             </div>
             <Button @click="handleDownload(selectedFile)">
-              <Download class="mr-2" />
+              <Download />
               Download
             </Button>
           </div>

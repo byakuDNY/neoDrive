@@ -12,7 +12,7 @@ const SIDEBAR_COLLAPSED_KEY = 'is-sidebar-collapsed'
 
 const route = useRoute()
 const isCollapsed = ref(true)
-const { loadSubscriptionUsage, storageUsagePercentage, subscriptionUsage } = useBucketStore()
+const bucketStore = useBucketStore()
 
 onMounted(async () => {
   const stored = localStorage.getItem(SIDEBAR_COLLAPSED_KEY)
@@ -20,7 +20,7 @@ onMounted(async () => {
     isCollapsed.value = JSON.parse(stored)
   }
 
-  await loadSubscriptionUsage()
+  await bucketStore.loadSubscriptionUsage()
 })
 
 watch(isCollapsed, (newValue) => {
@@ -29,6 +29,7 @@ watch(isCollapsed, (newValue) => {
 
 const toggleSidebar = () => {
   isCollapsed.value = !isCollapsed.value
+  console.log(bucketStore.subscriptionUsage)
 }
 
 const isActiveRoute = (href: string) => {
@@ -36,7 +37,7 @@ const isActiveRoute = (href: string) => {
 }
 
 const storagePercentage = computed(() => {
-  return Number(storageUsagePercentage)
+  return Number(bucketStore.storageUsagePercentage)
 })
 
 const isStorageWarning = computed(() => {
@@ -134,9 +135,9 @@ const isStorageCritical = computed(() => {
       </section>
 
       <!-- Storage Section -->
-      <section class="p-2 border-t-2 border-border">
+      <section class="px-2 pt-40 border-border">
         <div
-          v-if="subscriptionUsage"
+          v-if="bucketStore.subscriptionUsage"
           class="bg-background border-2 border-border rounded-base shadow-shadow p-3"
           :class="[
             isStorageCritical ? 'border-red-500' : isStorageWarning ? 'border-yellow-500' : '',
@@ -146,7 +147,6 @@ const isStorageCritical = computed(() => {
           <div v-if="isCollapsed" class="flex justify-center">
             <div class="relative">
               <HardDrive
-                class="size-6"
                 :class="[
                   isStorageCritical
                     ? 'text-red-500'
@@ -167,7 +167,6 @@ const isStorageCritical = computed(() => {
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <HardDrive
-                  class="size-4"
                   :class="[
                     isStorageCritical
                       ? 'text-red-500'
@@ -180,7 +179,6 @@ const isStorageCritical = computed(() => {
               </div>
               <AlertTriangle
                 v-if="isStorageWarning"
-                class="size-4"
                 :class="isStorageCritical ? 'text-red-500' : 'text-yellow-500'"
               />
             </div>
@@ -199,8 +197,8 @@ const isStorageCritical = computed(() => {
             <!-- Storage Text -->
             <div class="text-xs text-foreground/70">
               <div class="flex justify-between items-center">
-                <span>{{ formatFileSize(subscriptionUsage.totalUsedStorage) }}</span>
-                <span>{{ formatFileSize(subscriptionUsage.maxTotalStorage) }}</span>
+                <span>{{ formatFileSize(bucketStore.subscriptionUsage.usedStorage) }}</span>
+                <span>{{ formatFileSize(bucketStore.subscriptionUsage.storageLimit) }}</span>
               </div>
               <div class="text-center mt-1">
                 <span
@@ -213,7 +211,7 @@ const isStorageCritical = computed(() => {
                         : 'text-main',
                   ]"
                 >
-                  {{ storagePercentage.toFixed(1) }}% used
+                  {{ bucketStore.subscriptionUsage.usagePercentage }}% used
                 </span>
               </div>
             </div>

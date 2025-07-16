@@ -9,7 +9,6 @@ import {
 } from 'lucide-vue-next'
 
 // import { useBucketStore } from '@/stores/bucketStore'
-import { useBucketStore } from '@/stores/bucketStore'
 import { twMerge } from 'tailwind-merge'
 import type { Component } from 'vue'
 import type { FileCategory } from './types'
@@ -80,37 +79,4 @@ export const formatFileSize = (bytes: number) => {
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(1024))
   return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`
-}
-
-export const validateFile = (file: File): { valid: boolean; error?: string } => {
-  const { subscriptionUsage } = useBucketStore()
-
-  if (!subscriptionUsage) return { valid: true }
-
-  const { allowedMimeTypes, maxFileSize, remainingStorage } = subscriptionUsage
-
-  // Check file size
-  if (file.size > maxFileSize) {
-    return {
-      valid: false,
-      error: 'File size exceeds limit',
-    }
-  }
-
-  // Check mimetype
-  if (allowedMimeTypes && !allowedMimeTypes.includes(file.type)) {
-    return {
-      valid: false,
-      error: `File type '${file.type}' not allowed for your subscription plan`,
-    }
-  }
-  // Check storage space
-  if (remainingStorage < file.size) {
-    return {
-      valid: false,
-      error: `Insufficient storage space. Available: ${(remainingStorage / 1024 / 1024).toFixed(1)}MB`,
-    }
-  }
-
-  return { valid: true }
 }

@@ -44,9 +44,19 @@ export type FileMetadata = {
 }
 
 export type SubscriptionUsage = {
-  maxFileSize: number
-  maxTotalStorage: number
-  totalUsedStorage: number
+  usedStorage: number
+  storageLimit: number
   remainingStorage: number
-  allowedMimeTypes: string[] | null
+  usagePercentage: number
+  subscription: 'free' | 'pro' | 'premium'
+}
+
+export type UploadItem = {
+  id: string
+  name: string
+  size: number
+  progress: number
+  status: 'pending' | 'uploading' | 'completed' | 'error'
+  error?: string
+  file: File
 }

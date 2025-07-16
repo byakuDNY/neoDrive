@@ -5,7 +5,6 @@ import { defineStore } from 'pinia'
 import { computed } from 'vue'
 
 const fetchFiles = async (): Promise<Omit<SelectFile, 'icon'>[]> => {
-  // Simulate API delay
   // await new Promise((resolve) => setTimeout(resolve, 1000))
 
   const response = await fetch('/api/file', {
@@ -23,16 +22,17 @@ const fetchFiles = async (): Promise<Omit<SelectFile, 'icon'>[]> => {
     throw new Error(data.message ?? 'Failed to store file metadata')
   }
 
-  console.log('Files:', data.files)
+  console.log('Files:', data.filesWithUrls)
 
-  return data.files
+  return data.filesWithUrls ?? []
+  // return mockFileData
 }
 
 export const useFileStore = defineStore('file', () => {
   const { data, isPending, error, refetch } = useQuery({
     queryKey: ['files'],
     queryFn: fetchFiles,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   })
 
   const allFiles = computed<SelectFile[]>(() => {

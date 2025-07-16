@@ -6,11 +6,7 @@ import { envConfig } from "../lib/envConfig";
 import { s3Client } from "../lib/s3Client";
 import { fileMetadataSchema, presignedUrlSchema } from "../lib/schemas";
 import { getSession } from "../lib/session";
-import {
-  calculateUsedStorage,
-  checkSubscriptionLimits,
-  SUBSCRIPTION_LIMITS,
-} from "../lib/utils";
+import { calculateUsedStorage, SUBSCRIPTION_LIMITS } from "../lib/utils";
 import { File } from "../models/fileModel";
 
 export const handleGetFiles = async (
@@ -26,9 +22,24 @@ export const handleGetFiles = async (
 
   try {
     const files = await File.find({ userId: session.id });
+
+    const filesWithUrls = files.map((file) => {
+      let url = null;
+
+      // Only generate URLs for actual files (not folders)
+      if (file.type === "file" && file.s3Key) {
+        url = `http://localhost:9000/${envConfig.S3_BUCKET}/${file.s3Key}`;
+      }
+
+      return {
+        ...file.toObject(),
+        url,
+      };
+    });
+
     return reply.status(200).send({
       message: "Files retrieved successfully",
-      files,
+      filesWithUrls,
     });
   } catch (error) {
     console.error("Error retrieving files:", error);
@@ -53,13 +64,24 @@ export const handlePresignedUrl = async (
     });
   }
 
-  const { success: successCheck, message } = await checkSubscriptionLimits(
-    session,
-    data.size,
-    data.mimeType
-  );
-  if (!successCheck) {
-    return reply.status(403).send({ message });
+  try {
+    const usedStorage = await calculateUsedStorage(session.id);
+    const storageLimit =
+      SUBSCRIPTION_LIMITS[
+        session.subscription as keyof typeof SUBSCRIPTION_LIMITS
+      ];
+
+    if (usedStorage + data.size > storageLimit) {
+      return reply.status(403).send({
+        message:
+          "Storage limit exceeded. Please upgrade your subscription or delete some files.",
+      });
+    }
+  } catch (error) {
+    console.error("Error checking storage usage:", error);
+    return reply.status(500).send({
+      message: "Failed to check storage usage",
+    });
   }
 
   const uniqueKey = `${session.id}${data.path}`;
@@ -136,18 +158,21 @@ export const handleGetStorageUsage = async (
   }
 
   try {
-    const subscriptionPlan = session.subscription;
-    const limits =
-      SUBSCRIPTION_LIMITS[subscriptionPlan as keyof typeof SUBSCRIPTION_LIMITS];
-
-    const totalUsedStorage = await calculateUsedStorage(session.id);
+    const usedStorage = await calculateUsedStorage(session.id);
+    const storageLimit =
+      SUBSCRIPTION_LIMITS[
+        session.subscription as keyof typeof SUBSCRIPTION_LIMITS
+      ];
 
     return reply.status(200).send({
-      maxFileSize: limits.maxFileSize,
-      maxTotalStorage: limits.maxTotalStorage,
-      totalUsedStorage,
-      allowedMimeTypes: limits.allowedMimeTypes,
-      remainingStorage: limits.maxTotalStorage - totalUsedStorage,
+      message: "Storage usage retrieved successfully",
+      data: {
+        usedStorage,
+        storageLimit,
+        remainingStorage: storageLimit - usedStorage,
+        usagePercentage: Math.round((usedStorage / storageLimit) * 100),
+        subscription: session.subscription,
+      },
     });
   } catch (error) {
     console.error("Error getting storage usage:", error);
