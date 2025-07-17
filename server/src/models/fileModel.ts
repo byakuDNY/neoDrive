@@ -60,6 +60,12 @@ const fileSchema = new mongoose.Schema(
       required: false,
       default: false,
     },
+    category: {
+      type: String,
+      required: false,
+      enum: ["images", "videos", "audio", "documents", "others"],
+      default: null,
+    },
   },
   {
     timestamps: true,

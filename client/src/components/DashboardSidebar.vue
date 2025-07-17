@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { mainNavigation, secondaryNavigation } from '@/lib/constants'
+import { MAIN_NAVIGATION, SECONDARY_NAVIGATION } from '@/lib/constants'
 import { formatFileSize } from '@/lib/utils'
 import { useBucketStore } from '@/stores/bucketStore'
 import { AlertTriangle, HardDrive, MenuIcon, XIcon } from 'lucide-vue-next'
@@ -77,7 +77,7 @@ const isStorageCritical = computed(() => {
         <!-- Main Navigation -->
         <section>
           <ul class="space-y-2">
-            <li v-for="item in mainNavigation" :key="item.name">
+            <li v-for="item in MAIN_NAVIGATION" :key="item.name">
               <RouterLink
                 :to="item.href"
                 class="flex items-center bg-background border-2 border-border rounded-base shadow-shadow hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all duration-150 group font-heading"
@@ -107,7 +107,7 @@ const isStorageCritical = computed(() => {
         <!-- Secondary Navigation -->
         <section>
           <ul class="space-y-2">
-            <li v-for="item in secondaryNavigation" :key="item.name">
+            <li v-for="item in SECONDARY_NAVIGATION" :key="item.name">
               <RouterLink
                 :to="item.href"
                 class="flex items-center bg-background border-2 border-border rounded-base shadow-shadow hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all duration-150 group font-heading"

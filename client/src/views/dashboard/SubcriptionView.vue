@@ -2,103 +2,46 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { PRICING_PLANS } from '@/lib/constants'
 import { useAuthStore } from '@/stores/authStore'
 import { useBucketStore } from '@/stores/bucketStore'
-import {
-  AlertCircle,
-  Check,
-  Crown,
-  FileText,
-  HardDrive,
-  Image,
-  Music,
-  Star,
-  TrendingUp,
-  Video,
-  Zap,
-} from 'lucide-vue-next'
+import { AlertCircle, Crown, HardDrive, Star, TrendingUp, Zap } from 'lucide-vue-next'
 import { computed, onMounted } from 'vue'
 
 const bucketStore = useBucketStore()
 const authStore = useAuthStore()
 
-// Subscription limits
-const SUBSCRIPTION_LIMITS = {
-  free: {
-    name: 'Free',
-    price: '$0',
-    period: 'forever',
-    maxFileSize: 30 * 1024 * 1024, // 30MB
-    maxTotalStorage: 100 * 1024 * 1024, // 100MB
-    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'text/plain', 'application/pdf'],
-    features: [
-      '100 MB total storage',
-      '30 MB max file size',
-      'Basic file types only',
-      'Web access',
-      'Basic support',
-    ],
-  },
-  pro: {
-    name: 'Pro',
-    price: '$9.99',
-    period: 'per month',
-    maxFileSize: 1024 * 1024 * 1024, // 1GB
-    maxTotalStorage: 5 * 1024 * 1024 * 1024, // 5GB
-    allowedMimeTypes: null, // null means all types allowed
-    features: [
-      '5 GB total storage',
-      '1 GB max file size',
-      'All file types supported',
-      'Priority support',
-      'File versioning',
-      'Advanced sharing',
-    ],
-  },
-  premium: {
-    name: 'Premium',
-    price: '$19.99',
-    period: 'per month',
-    maxFileSize: 30 * 1024 * 1024 * 1024, // 30GB
-    maxTotalStorage: 100 * 1024 * 1024 * 1024, // 100GB
-    allowedMimeTypes: null, // null means all types allowed
-    features: [
-      '100 GB total storage',
-      '30 GB max file size',
-      'All file types supported',
-      '24/7 premium support',
-      'Team collaboration',
-      'Advanced security',
-      'Custom branding',
-      'API access',
-    ],
-  },
-}
-
-// Current subscription (mock - replace with actual user subscription)
+// Current subscription
 const currentPlan = computed(() => {
   return authStore.session?.subscription || 'free'
 })
 
 const currentPlanDetails = computed(() => {
-  return SUBSCRIPTION_LIMITS[currentPlan.value as keyof typeof SUBSCRIPTION_LIMITS]
+  return (
+    PRICING_PLANS.find((plan) => plan.name.toLowerCase() === currentPlan.value.toLowerCase()) ||
+    PRICING_PLANS[0]
+  )
 })
 
 // Storage calculations
 const storageUsed = computed(() => {
-  return bucketStore.subscriptionUsage?.totalUsedStorage || 0
+  return bucketStore.subscriptionUsage?.usedStorage || 0
 })
 
 const storageTotal = computed(() => {
-  return bucketStore.subscriptionUsage?.maxTotalStorage || 0
+  return bucketStore.subscriptionUsage?.storageLimit || 0
 })
 
 const storagePercentage = computed(() => {
-  return Number(bucketStore.storageUsagePercentage)
+  return Number(bucketStore.storageUsagePercentage) || 0
 })
 
 const isStorageWarning = computed(() => {
   return storagePercentage.value > 80
+})
+
+const isStorageCritical = computed(() => {
+  return storagePercentage.value > 95
 })
 
 // Format bytes helper
@@ -110,16 +53,9 @@ const formatBytes = (bytes: number) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
-// File type icons
-const fileTypeIcons = {
-  'image/jpeg': Image,
-  'image/png': Image,
-  'image/gif': Image,
-  'text/plain': FileText,
-  'application/pdf': FileText,
-  video: Video,
-  audio: Music,
-  document: FileText,
+// Get plan key from plan name
+const getPlanKey = (planName: string) => {
+  return planName.toLowerCase()
 }
 
 onMounted(async () => {
@@ -143,7 +79,7 @@ const handleManageBilling = () => {
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
       <div>
         <h1 class="text-3xl font-heading">Subscription</h1>
-        <p class="text-foreground/80">Manage your subscription and billing</p>
+        <p class="text-foreground/80">Manage your subscription and storage</p>
       </div>
 
       <div class="flex items-center gap-2">
@@ -160,6 +96,7 @@ const handleManageBilling = () => {
         >
           <Crown v-if="currentPlan === 'premium'" class="size-3 mr-1" />
           <Star v-else-if="currentPlan === 'pro'" class="size-3 mr-1" />
+          <Zap v-else class="size-3 mr-1" />
           {{ currentPlanDetails.name }} Plan
         </Badge>
       </div>
@@ -171,100 +108,107 @@ const handleManageBilling = () => {
         <div class="flex items-center justify-between">
           <div>
             <CardTitle class="flex items-center gap-2">
-              <HardDrive class="size-4" />
-              Current Usage
+              <HardDrive class="size-5" />
+              Storage Usage
             </CardTitle>
-            <CardDescription>Your storage and plan details</CardDescription>
+            <CardDescription>Your current storage usage and plan details</CardDescription>
           </div>
           <Button variant="neutral" @click="handleManageBilling"> Manage Billing </Button>
         </div>
       </CardHeader>
       <CardContent class="space-y-6">
         <!-- Storage Usage -->
-        <div class="space-y-3">
+        <div class="space-y-4">
           <div class="flex justify-between items-center">
-            <span class="text-sm font-medium">Storage Usage</span>
-            <span class="text-sm text-foreground/70">
+            <span class="text-lg font-medium">{{ currentPlanDetails.name }} Plan</span>
+            <span class="text-lg font-mono">
               {{ formatBytes(storageUsed) }} / {{ formatBytes(storageTotal) }}
             </span>
           </div>
 
           <!-- Progress Bar -->
-          <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+          <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
             <div
-              class="h-2 rounded-full transition-all duration-300"
-              :class="[isStorageWarning ? 'bg-yellow-500' : 'bg-main']"
+              class="h-3 rounded-full transition-all duration-300"
+              :class="[
+                isStorageCritical ? 'bg-red-500' : isStorageWarning ? 'bg-yellow-500' : 'bg-main',
+              ]"
               :style="{ width: `${Math.min(storagePercentage, 100)}%` }"
             ></div>
           </div>
 
-          <div class="flex justify-between items-center text-xs text-foreground/60">
-            <span>{{ storagePercentage.toFixed(1) }}% used</span>
-            <span v-if="isStorageWarning" class="text-red-500 flex items-center gap-1">
-              <AlertCircle class="size-3" />
-              Storage running low
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-foreground/70">{{ storagePercentage.toFixed(1) }}% used</span>
+            <span
+              v-if="isStorageWarning"
+              class="text-red-500 flex items-center gap-1 text-sm font-medium"
+            >
+              <AlertCircle class="size-4" />
+              {{ isStorageCritical ? 'Storage almost full!' : 'Storage running low' }}
             </span>
           </div>
         </div>
 
-        <!-- Current Plan Features -->
-        <div class="grid md:grid-cols-2 gap-4">
-          <div class="space-y-2">
-            <h4 class="font-medium text-sm">Current Plan Features</h4>
-            <ul class="space-y-1 text-sm text-foreground/70">
-              <li
-                v-for="feature in currentPlanDetails.features"
-                :key="feature"
-                class="flex items-start gap-2"
-              >
-                <Check class="size-3 text-main mt-0.5 flex-shrink-0" />
-                {{ feature }}
-              </li>
-            </ul>
-          </div>
-
-          <div class="space-y-2">
-            <h4 class="font-medium text-sm">Allowed File Types</h4>
-            <div v-if="currentPlanDetails.allowedMimeTypes" class="flex flex-wrap gap-1">
-              <Badge
-                v-for="mimeType in currentPlanDetails.allowedMimeTypes"
-                :key="mimeType"
-                variant="secondary"
-                class="text-xs"
-              >
-                {{ mimeType.split('/')[1] || mimeType }}
-              </Badge>
-            </div>
-            <div v-else class="flex items-center gap-2">
-              <Badge variant="secondary" class="text-xs">All file types</Badge>
-              <span class="text-xs text-main">✨ Unlimited</span>
+        <!-- Storage Warning Card -->
+        <div
+          v-if="isStorageWarning"
+          class="p-4 rounded-base border-2"
+          :class="
+            isStorageCritical
+              ? 'bg-red-50 border-red-200 text-red-800'
+              : 'bg-yellow-50 border-yellow-200 text-yellow-800'
+          "
+        >
+          <div class="flex items-start gap-3">
+            <AlertCircle
+              class="size-5 mt-0.5 flex-shrink-0"
+              :class="isStorageCritical ? 'text-red-500' : 'text-yellow-500'"
+            />
+            <div class="space-y-1">
+              <p class="font-medium">
+                {{ isStorageCritical ? 'Storage limit reached!' : 'Storage running low' }}
+              </p>
+              <p class="text-sm">
+                {{
+                  isStorageCritical
+                    ? "You've used most of your storage space. Upgrade to continue uploading files."
+                    : 'Consider upgrading your plan to get more storage space.'
+                }}
+              </p>
             </div>
           </div>
         </div>
       </CardContent>
     </Card>
 
-    <!-- Upgrade Plans -->
+    <!-- Available Plans -->
     <div class="space-y-4">
-      <h2 class="text-2xl font-heading">Upgrade Your Plan</h2>
+      <h2 class="text-2xl font-heading">Choose Your Plan</h2>
+      <p class="text-foreground/70">Simple storage plans that scale with your needs</p>
+
       <div class="grid md:grid-cols-3 gap-6">
         <Card
-          v-for="(plan, key) in SUBSCRIPTION_LIMITS"
-          :key="key"
-          class="border-2 border-border rounded-base shadow-shadow relative"
+          v-for="plan in PRICING_PLANS"
+          :key="plan.name"
+          class="border-2 border-border rounded-base shadow-shadow relative transition-all duration-200"
           :class="[
-            key === currentPlan ? 'ring-2 ring-main' : '',
-            key === 'pro' ? 'scale-105 border-blue-500' : '',
-            key === 'premium' ? 'border-yellow-500' : '',
+            getPlanKey(plan.name) === currentPlan
+              ? 'ring-2 ring-main bg-main/5'
+              : 'hover:shadow-lg',
+            plan.popular ? 'scale-105 border-blue-500' : '',
+            plan.name === 'Premium' ? 'border-yellow-500' : '',
           ]"
         >
           <!-- Popular Badge -->
-          <div v-if="key === 'pro'" class="absolute -top-3 left-1/2 transform -translate-x-1/2">
+          <div v-if="plan.popular" class="absolute -top-3 left-1/2 transform -translate-x-1/2">
             <Badge class="bg-blue-500 text-white">Most Popular</Badge>
           </div>
 
           <!-- Premium Badge -->
-          <div v-if="key === 'premium'" class="absolute -top-3 left-1/2 transform -translate-x-1/2">
+          <div
+            v-if="plan.name === 'Premium'"
+            class="absolute -top-3 left-1/2 transform -translate-x-1/2"
+          >
             <Badge class="bg-yellow-500 text-white">
               <Crown class="size-3 mr-1" />
               Premium
@@ -273,45 +217,49 @@ const handleManageBilling = () => {
 
           <CardHeader class="text-center">
             <CardTitle class="flex items-center justify-center gap-2">
-              <Zap v-if="key === 'free'" class="size-4" />
-              <TrendingUp v-else-if="key === 'pro'" class="size-4 text-blue-500" />
-              <Crown v-else class="size-4 text-yellow-500" />
+              <Zap v-if="plan.name === 'Free'" class="size-5" />
+              <TrendingUp v-else-if="plan.name === 'Pro'" class="size-5 text-blue-500" />
+              <Crown v-else class="size-5 text-yellow-500" />
               {{ plan.name }}
             </CardTitle>
             <div class="space-y-2">
               <div class="flex items-baseline justify-center gap-2">
-                <span class="text-3xl font-heading">{{ plan.price }}</span>
+                <span class="text-4xl font-heading">{{ plan.price }}</span>
                 <span class="text-foreground/60">{{ plan.period }}</span>
               </div>
-              <CardDescription>
-                {{ formatBytes(plan.maxTotalStorage) }} storage •
-                {{ formatBytes(plan.maxFileSize) }} max file size
+              <CardDescription class="text-center">
+                {{ plan.description }}
               </CardDescription>
             </div>
           </CardHeader>
 
-          <CardContent class="space-y-4">
-            <ul class="space-y-2">
-              <li
-                v-for="feature in plan.features"
-                :key="feature"
-                class="flex items-start gap-2 text-sm"
-              >
-                <Check class="size-4 text-main mt-0.5 flex-shrink-0" />
-                {{ feature }}
-              </li>
-            </ul>
+          <CardContent class="space-y-6">
+            <!-- Storage Feature -->
+            <div class="text-center space-y-2">
+              <div class="flex items-center justify-center gap-2">
+                <HardDrive class="size-5 text-main" />
+                <span class="text-2xl font-bold">{{ plan.features }}</span>
+              </div>
+              <p class="text-sm text-foreground/70">Storage space</p>
+            </div>
 
+            <!-- Current Plan Indicator -->
+            <div v-if="getPlanKey(plan.name) === currentPlan" class="text-center">
+              <Badge variant="default" class="px-4 py-2"> Current Plan </Badge>
+            </div>
+
+            <!-- Action Button -->
             <Button
-              v-if="key !== currentPlan"
-              @click="handleUpgrade(key)"
+              v-else
+              @click="handleUpgrade(getPlanKey(plan.name))"
               class="w-full"
-              :variant="key === 'pro' ? 'default' : 'neutral'"
+              :variant="
+                plan.name === 'Pro' ? 'default' : plan.name === 'Premium' ? 'default' : 'neutral'
+              "
+              :class="plan.name === 'Premium' ? 'bg-yellow-500 hover:bg-yellow-600' : ''"
             >
-              {{ key === 'free' ? 'Downgrade' : 'Upgrade' }} to {{ plan.name }}
+              {{ plan.name === 'Free' ? 'Downgrade' : 'Upgrade' }} to {{ plan.name }}
             </Button>
-
-            <Button v-else variant="neutral" disabled class="w-full"> Current Plan </Button>
           </CardContent>
         </Card>
       </div>

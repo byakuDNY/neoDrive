@@ -3,7 +3,7 @@ import PublicFooter from '@/components/PublicFooter.vue'
 import PublicHeader from '@/components/PublicHeader.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { features, pricingPlans } from '@/lib/constants'
+import { FEATURES, PRICING_PLANS } from '@/lib/constants'
 import { useAuthStore } from '@/stores/authStore'
 import { Check } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
@@ -44,7 +44,7 @@ const { isAuthenticated } = useAuthStore()
 
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           <div
-            v-for="feature in features"
+            v-for="feature in FEATURES"
             class="bg-background border-2 border-border rounded-base shadow-shadow p-6 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
           >
             <div class="flex items-center gap-4 mb-4">
@@ -64,16 +64,17 @@ const { isAuthenticated } = useAuthStore()
         <div class="text-center mb-16">
           <h2 class="text-3xl md:text-4xl font-heading mb-4">Simple, Transparent Pricing</h2>
           <p class="text-xl text-foreground/80 max-w-2xl mx-auto">
-            Choose the plan that fits your needs. All plans include our core features.
+            Choose the plan that fits your needs. All plans include secure cloud storage.
           </p>
         </div>
 
         <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           <Card
-            v-for="plan in pricingPlans"
+            v-for="plan in PRICING_PLANS"
+            :key="plan.name"
             :class="[
               'relative border-2 border-border rounded-base shadow-shadow',
-              plan.popular ?? 'border-main scale-105',
+              plan.popular ? 'border-main scale-105' : '',
             ]"
           >
             <div
@@ -97,10 +98,16 @@ const { isAuthenticated } = useAuthStore()
             </CardHeader>
 
             <CardContent class="space-y-6 flex flex-col h-full justify-between">
-              <div class="space-y-3">
-                <div v-for="feature in plan.features" :key="feature" class="flex items-start gap-3">
-                  <Check class="size-5 text-main mt-0.5 flex-shrink-0" />
-                  <span class="text-sm">{{ feature }}</span>
+              <div class="space-y-4">
+                <!-- Storage Feature -->
+                <div
+                  class="flex items-center gap-3 p-3 bg-main/5 border border-main/20 rounded-base"
+                >
+                  <Check class="size-5 text-main flex-shrink-0" />
+                  <div class="flex items-center gap-2">
+                    <span class="text-lg font-semibold">{{ plan.features }}</span>
+                    <span class="text-sm text-foreground/70">storage space</span>
+                  </div>
                 </div>
               </div>
 

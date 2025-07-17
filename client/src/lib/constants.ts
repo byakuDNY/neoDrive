@@ -15,7 +15,7 @@ import {
   Zap,
 } from 'lucide-vue-next'
 
-export const features = [
+export const FEATURES = [
   {
     icon: Cloud,
     title: 'Secure Cloud Storage',
@@ -48,37 +48,22 @@ export const features = [
   },
 ]
 
-export const pricingPlans = [
+export const PRICING_PLANS = [
   {
     name: 'Free',
     price: '$0',
     period: 'forever',
-    description: 'Perfect for personal use',
-    features: [
-      '100 MB total storage',
-      '30 MB max file size',
-      'Basic file types (Images, PDFs, Text)',
-      'Basic sharing',
-      'Web access',
-    ],
-    limitations: ['Limited file types', 'Small storage capacity'],
+    description: 'Perfect for trying out neoDrive',
+    features: '200 MB',
     popular: false,
     cta: 'Get Started Free',
   },
   {
     name: 'Pro',
-    price: '$9.99',
+    price: '$4.99',
     period: 'per month',
-    description: 'For professionals and small teams',
-    features: [
-      '5 GB total storage',
-      '1 GB max file size',
-      'All file types supported',
-      'Advanced sharing options',
-      'Priority support',
-      'File versioning',
-    ],
-    limitations: [],
+    description: 'Great for personal use and small projects',
+    features: '10 GB',
     popular: true,
     cta: 'Go Pro',
   },
@@ -86,22 +71,13 @@ export const pricingPlans = [
     name: 'Premium',
     price: '$19.99',
     period: 'per month',
-    description: 'For power users and large teams',
-    features: [
-      '100 GB total storage',
-      '30 GB max file size',
-      'All file types supported',
-      'Team collaboration',
-      '24/7 premium support',
-      'Advanced security features',
-      'Custom branding',
-    ],
-    limitations: [],
+    description: 'Perfect for professionals and teams',
+    features: '100 GB',
     popular: false,
     cta: 'Go Premium',
   },
 ]
-export const mainNavigation = [
+export const MAIN_NAVIGATION = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
   { name: 'Images', href: '/dashboard/images', icon: FileImageIcon },
   { name: 'Videos', href: '/dashboard/videos', icon: FileVideoIcon },
@@ -110,14 +86,14 @@ export const mainNavigation = [
   { name: 'Others', href: '/dashboard/others', icon: FileIcon },
 ]
 
-export const secondaryNavigation = [
+export const SECONDARY_NAVIGATION = [
   { name: 'Favorites', href: '/dashboard/favorites', icon: HeartIcon },
   { name: 'Subscriptions', href: '/dashboard/subscriptions', icon: BellIcon },
 ]
 
 import type { SelectFile } from './types'
 
-export const mockFileData: Omit<SelectFile, 'icon'>[] = [
+export const MOCK_FILE_DATA: Omit<SelectFile, 'icon'>[] = [
   {
     id: 'folder-1',
     userId: 'user-123',
