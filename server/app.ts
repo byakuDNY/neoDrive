@@ -6,8 +6,9 @@ import { validateS3BucketAccess } from "./src/lib/s3Client";
 import { CLEANUP_INTERVAL, cleanupExpiredSessions } from "./src/lib/session.js";
 import { authRoutes } from "./src/routes/authRoute";
 import { fileRoutes } from "./src/routes/fileRoute";
-import { stripeRoutes } from "./src/routes/stripe";
+import { stripeRoutes } from "./src/routes/stripeRoutes";
 import { userRoutes } from "./src/routes/userRoutes";
+import { webhookRoutes } from "./src/routes/webhookRoutes";
 
 const fastify = Fastify({
   logger: {
@@ -44,6 +45,10 @@ const startServer = async () => {
     fastify.register(fileRoutes, {
       prefix: "/api/file",
     });
+
+    fastify.register(webhookRoutes,{
+      prefix: "/api/webhook",
+    })
 
     const s3Connected = await validateS3BucketAccess();
     if (!s3Connected) {

@@ -32,7 +32,7 @@ const userSchema = new mongoose.Schema(
     },
     subscription: {
       type: String,
-      enum: ["free", "pro", "premium"],
+      enum: ["Free", "Pro", "Premium"],
       required: true,
     },
   },
@@ -44,5 +44,5 @@ const userSchema = new mongoose.Schema(
 
 export type IUser = mongoose.InferSchemaType<typeof userSchema>;
 export type UserDocument = mongoose.Document & IUser;
-export type SubscriptionPlan = "free" | "pro" | "premium";
+export type SubscriptionPlan = "Free" | "Pro" | "Premium";
 export const User = mongoose.model("User", userSchema);

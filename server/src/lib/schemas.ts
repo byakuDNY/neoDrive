@@ -17,6 +17,19 @@ export const signUpSchema = z
     path: ["confirmPassword"],
   });
 
+export const nameChangeSchema = z.object({
+  name: z.string().min(2).max(32).transform(val => val.trim()),
+});
+
+export const passwordChangeSchema = z.object({
+  currentPassword: z.string().min(8).max(32).transform(val => val.trim()),
+  newPassword: z.string().min(8).max(32).transform(val => val.trim()),
+  confirmNewPassword: z.string().min(8).max(32).transform(val => val.trim()),
+}).refine(data => data.newPassword === data.confirmNewPassword, {
+  message: "New passwords do not match",
+  path: ["confirmNewPassword"]
+});
+
 export const presignedUrlSchema = z.object({
   name: z.string().min(1).max(255),
   size: z.number().min(1),
@@ -38,3 +51,14 @@ export const fileMetadataSchema = z.object({
     .enum(["images", "videos", "audio", "documents", "others"])
     .nullable(),
 });
+
+export const createProductSchema = z.object({
+  name: z.string().min(1).max(100).transform(val => val.trim()),
+  price: z.number().positive(),
+})
+
+export const createCheckoutSessionSchema = z.object({
+  product: z.string(),
+  successUrl: z.string(),
+  cancelUrl: z.string(),
+})

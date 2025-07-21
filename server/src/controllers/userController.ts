@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { getSession, sessions } from "../lib/session";
-import { nameChangeSchema, passwordChangeSchema } from "../lib/user";
+import { nameChangeSchema, passwordChangeSchema } from "../lib/schemas";
 import { comparePassword, generateSalt, hashPassword } from "../lib/utils";
 import { User } from "../models/userModel";
 
