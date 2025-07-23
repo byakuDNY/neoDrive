@@ -45,17 +45,29 @@ export const handleCompletedCheckout = async (session: Stripe.Checkout.Session) 
   }
 };
 
-export const handleCancelledCheckout = async (session: Stripe.Checkout.Session) => {
+export const handleInvoicePaymentSucceeded = async (session: Stripe.Invoice) => {
   try {
-    console.log('Processing cancelled checkout:', session.id);
-
-    const userId = session.metadata?.userId;
-    if (!userId) {
-      throw new Error('No user ID found in session metadata');
+    const user = await User.findOne({ stripeCustomerId: session.customer as string });
+    if (!user) {
+      throw new Error('No user ID found in invoice metadata');
     }
-
+    const subscription = await Subscription.findOne({ name: user.subscription });
+    if (!subscription) {
+      throw new Error(`Subscription plan not found: ${user.subscription}`);
+    }
+    const paymentDate = new Date();
+    await UserPaymentHistory.create({
+      userId: user.id,
+      subscriptionId: subscription?._id.toString(),
+      amount: session.amount_paid / 100,
+      paymentDate: paymentDate
+    });
+    const subscriptionEndDate = new Date();
+    subscriptionEndDate.setDate(subscriptionEndDate.getDate() + 30);
+    user.SubscriptionEndDate = subscriptionEndDate;
+    await user.save();
   } catch (error) {
-    console.error('Error processing cancelled checkout:', error);
+    console.error('Error processing invoice payment succeeded:', error);
     throw error;
   }
 }

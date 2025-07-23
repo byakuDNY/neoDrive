@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import { FastifyReply, FastifyRequest } from "fastify";
 import stripe from "stripe";
-import { handleCancelledCheckout, handleCompletedCheckout } from "../lib/stripe";
+import { handleCompletedCheckout, handleInvoicePaymentSucceeded } from "../lib/stripe";
 
 dotenv.config();
 
@@ -26,12 +26,14 @@ export const handleWebhooks = async (
   try {
     switch(event.type){
       case 'checkout.session.completed':
-        await handleCompletedCheckout(event.data.object)
+        await handleCompletedCheckout(event.data.object as stripe.Checkout.Session);
         return reply.status(200).send({ message: "Checkout session completed" });
       case 'customer.subscription.updated':
 
       case 'invoice.payment_succeeded':
-        
+        await handleInvoicePaymentSucceeded(event.data.object as stripe.Invoice);
+        return reply.status(200).send({ message: "Invoice payment succeeded" });
+      case 'customer.subscription.deleted':
 
     }
   } catch (error) {
