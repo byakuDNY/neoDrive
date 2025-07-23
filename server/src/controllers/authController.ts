@@ -4,7 +4,16 @@ import { loginSchema, signUpSchema } from "../lib/schemas";
 import { clearSession, createSession, getSession } from "../lib/session";
 import { comparePassword, generateSalt, hashPassword } from "../lib/utils";
 import { User } from "../models/userModel";
+import stripe from "stripe";
 
+const stripeClient = new stripe(
+  process.env.STRIPE_SECRET_KEY ||
+  (() => {
+    throw new Error(
+      "STRIPE_SECRET_KEY is not defined in environment variables"
+    );
+  })()
+);
 export const handleLogin = async (
   request: FastifyRequest,
   reply: FastifyReply
@@ -62,14 +71,22 @@ export const handleSignup = async (
 
     const randomSalt = generateSalt();
     const hashedPassword = hashPassword(data.password, randomSalt);
-
+    // create stripe customer
+    const stripeCustomer = await stripeClient.customers.create({
+      email: data.email,
+      name: data.name,
+    })
+    if(!stripeCustomer.id) {
+      return reply.status(500).send({ message: "Failed to create Stripe customer" });
+    }
     await User.create({
       id: `${data.name}_${ulid()}`,
+      stripeCustomerId: stripeCustomer.id,
       name: data.name,
       email: data.email,
       password: hashedPassword,
       salt: randomSalt,
-      subscription: "free",
+      subscription: "Free",
     });
 
     return reply.status(201).send({

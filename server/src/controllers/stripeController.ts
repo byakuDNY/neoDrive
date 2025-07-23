@@ -44,7 +44,6 @@ export const handleCreateProduct = async (
       price: data.price,
       stripeId: product.default_price,
     });
-
     return reply.status(201).send({
       message: "Product created successfully",
       product: {
@@ -86,6 +85,34 @@ export const handleCreateCheckoutSession = async (
     if (user.subscription == subscription.name) {
       return reply.status(400).send({ message: "User already subscribed to this plan" });
     }
+    // Prorate payment when upgrading from Pro to Premium
+    if (user.subscription == "Pro" && subscription.name == "Premium") {
+      if (!user.subscriptionId) {
+        return reply.status(400).send({ message: "No active subscription found for upgrade" });
+      }
+      try {
+        const currentSubscription = await stripeClient.subscriptions.retrieve(user.subscriptionId);
+        const updatedSubscription = await stripeClient.subscriptions.update(user.subscriptionId, {
+          items: [{
+            id: currentSubscription.items.data[0].id,
+            price: subscription.stripeId,
+          }],
+          proration_behavior: "create_prorations",
+        });
+
+        // Update local database
+        user.subscription = "Premium";
+        await user.save();
+
+        return reply.status(200).send({
+          message: "Subscription updated successfully",
+          subscription: updatedSubscription
+        });
+      } catch (stripeError) {
+        console.error("Stripe error during subscription update:", stripeError);
+        return reply.status(500).send({ message: "Failed to update subscription" });
+      }
+    }
 
     const Stripesession = await stripeClient.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -98,18 +125,11 @@ export const handleCreateCheckoutSession = async (
       mode: "subscription",
       success_url: `${data.successUrl}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${data.cancelUrl}?session_id={CHECKOUT_SESSION_ID}`,
-      customer_email: user.email,
+      customer: user.stripeCustomerId,
       metadata: {
         userId: user.id,
         product: subscription.name,
       },
-    });
-    await UserPaymentHistory.create({
-      userId: user.id,
-      subscriptionId: subscription._id.toString(),
-      stripeSessionId: Stripesession.id,
-      amount: subscription.price,
-      status: "pending",
     });
     return reply.status(200).send({ url: Stripesession.url });
   } catch (error) {

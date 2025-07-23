@@ -1,11 +1,10 @@
 import Stripe from "stripe";
 import { SubscriptionPlan, User } from "../models/userModel";
 import { UserPaymentHistory } from "../models/userPaymentHistoryModel";
+import { Subscription } from "../models/subscriptionsModel";
 
 export const handleCompletedCheckout = async (session: Stripe.Checkout.Session) => {
   try {
-    console.log('Processing completed checkout:', session.id);
-
     const userId = session.metadata?.userId;
     if (!userId) {
       throw new Error('No user ID found in session metadata');
@@ -14,15 +13,6 @@ export const handleCompletedCheckout = async (session: Stripe.Checkout.Session) 
     const user = await User.findOne({ id: userId });
     if (!user) {
       throw new Error(`User not found: ${userId}`);
-    }
-
-    const paymentHistory = await UserPaymentHistory.findOne({
-      stripeSessionId: session.id,
-      status: 'pending'
-    });
-
-    if (!paymentHistory) {
-      throw new Error(`Payment history not found for session: ${session.id}`);
     }
 
     const subscription = session.metadata?.product
@@ -34,10 +24,20 @@ export const handleCompletedCheckout = async (session: Stripe.Checkout.Session) 
     if (!allowedSubscriptions.includes(subscription as SubscriptionPlan)) {
       throw new Error(`Invalid subscription type: ${subscription}`);
     }
-  
-    paymentHistory.status = 'completed';
+    const subscriptionPlan = await Subscription.findOne({ name: subscription });
+    if (!subscriptionPlan) {
+      throw new Error(`Subscription plan not found: ${subscription}`);
+    }
+    const subscriptionEndDate = new Date();
+    subscriptionEndDate.setDate(subscriptionEndDate.getDate() + 30);
+    await UserPaymentHistory.create({
+      userId: user.id,
+      subscriptionId: subscriptionPlan._id.toString(),
+      amount: subscriptionPlan.price
+    });
     user.subscription = subscription as SubscriptionPlan;
-    await paymentHistory.save();
+    user.SubscriptionEndDate = subscriptionEndDate;
+    user.subscriptionId = session.subscription as string;
     await user.save();
   } catch (error) {
     console.error('Error processing completed checkout:', error);
@@ -54,15 +54,6 @@ export const handleCancelledCheckout = async (session: Stripe.Checkout.Session) 
       throw new Error('No user ID found in session metadata');
     }
 
-    const paymentHistory = await UserPaymentHistory.findOne({
-      stripeSessionId: session.id,
-      status: 'pending'
-    });
-
-    if (paymentHistory) {
-      paymentHistory.status = 'cancelled';
-      await paymentHistory.save();
-    }
   } catch (error) {
     console.error('Error processing cancelled checkout:', error);
     throw error;

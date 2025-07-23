@@ -8,6 +8,12 @@ const userSchema = new mongoose.Schema(
       unique: true,
       maxlength: 255,
     },
+    stripeCustomerId: {
+      type: String,
+      required: true,
+      unique: true,
+      maxlength: 255,
+    },
     name: {
       type: String,
       required: true,
@@ -35,6 +41,14 @@ const userSchema = new mongoose.Schema(
       enum: ["Free", "Pro", "Premium"],
       required: true,
     },
+    subscriptionId: {
+      type: String,
+      required: false,
+    },
+    SubscriptionEndDate: {
+      type: Date,
+      required: false,
+    }
   },
   {
     timestamps: true,

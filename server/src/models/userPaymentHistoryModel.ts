@@ -12,10 +12,6 @@ const userPaymentHistorySchema = new mongoose.Schema(
       ref: "Subscription",
       required: true,
     },
-    stripeSessionId: {
-      type: String,
-      required: true,
-    },
     stripeSubscriptionId: {
       type: String,
       required: false,
@@ -23,15 +19,6 @@ const userPaymentHistorySchema = new mongoose.Schema(
     amount: {
       type: Number,
       required: true,
-    },
-    currency: {
-      type: String,
-      default: 'usd',
-    },
-    status: {
-      type: String,
-      enum: ['pending', 'completed', 'failed', 'cancelled'],
-      default: 'pending',
     },
     paymentDate: {
       type: Date,

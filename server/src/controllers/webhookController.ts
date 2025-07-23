@@ -28,9 +28,11 @@ export const handleWebhooks = async (
       case 'checkout.session.completed':
         await handleCompletedCheckout(event.data.object)
         return reply.status(200).send({ message: "Checkout session completed" });
-      case 'checkout.session.expired':
-        await handleCancelledCheckout(event.data.object);
-        return reply.status(200).send({ message: "Checkout session expired" });
+      case 'customer.subscription.updated':
+
+      case 'invoice.payment_succeeded':
+        
+
     }
   } catch (error) {
     console.error("Error processing payment webhook:", error);
