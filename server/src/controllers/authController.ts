@@ -64,7 +64,7 @@ export const handleSignup = async (
     const hashedPassword = hashPassword(data.password, randomSalt);
 
     await User.create({
-      id: `${data.name}-${ulid()}`,
+      id: `${data.name}_${ulid()}`,
       name: data.name,
       email: data.email,
       password: hashedPassword,

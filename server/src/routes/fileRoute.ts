@@ -1,19 +1,22 @@
 import { FastifyInstance } from "fastify";
 import {
+  handleDeleteFile,
+  handleFavoriteFile,
   handleGetFiles,
   handleGetStorageUsage,
   handlePresignedUrl,
+  handleRenameFile,
   handleStoreFileMetadata,
 } from "../controllers/fileController";
-import { File } from "../models/fileModel";
 
 export const fileRoutes = async (fastify: FastifyInstance) => {
   fastify.get("/", handleGetFiles);
-  fastify.post("/presignedUrl", handlePresignedUrl);
-  fastify.post("/uploadFileMetadata", handleStoreFileMetadata);
   fastify.get("/getStorageUsage", handleGetStorageUsage);
 
-  fastify.delete("/debug/files", async () => {
-    return await File.deleteMany({});
-  });
+  fastify.post("/presignedUrl", handlePresignedUrl);
+  fastify.post("/uploadFileMetadata", handleStoreFileMetadata);
+  fastify.post("/renameFile", handleRenameFile);
+  fastify.post("/toggleFavorite", handleFavoriteFile);
+
+  fastify.delete("/", handleDeleteFile);
 };

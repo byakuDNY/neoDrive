@@ -5,7 +5,7 @@
       <div class="grid md:grid-cols-3 gap-8">
         <div class="space-y-4">
           <h3 class="font-heading text-lg">neoDrive</h3>
-          <p class="text-foreground/80 text-sm">Modern cloud storage for the modern world.</p>
+          <p>Your <span class="text-main">neo</span> cloud storage solution</p>
         </div>
 
         <div class="space-y-4">

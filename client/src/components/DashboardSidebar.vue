@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { MAIN_NAVIGATION, SECONDARY_NAVIGATION } from '@/lib/constants'
-import { formatFileSize } from '@/lib/utils'
+import { convertBytesToFileSize } from '@/lib/utils'
 import { useBucketStore } from '@/stores/bucketStore'
-import { AlertTriangle, HardDrive, MenuIcon, XIcon } from 'lucide-vue-next'
+import { AlertTriangle, HardDrive, Loader2, MenuIcon, XIcon } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppLogo from './AppLogo.vue'
 import { Button } from './ui/button'
+import { Progress } from './ui/progress'
 
 const SIDEBAR_COLLAPSED_KEY = 'is-sidebar-collapsed'
 
@@ -29,7 +30,6 @@ watch(isCollapsed, (newValue) => {
 
 const toggleSidebar = () => {
   isCollapsed.value = !isCollapsed.value
-  console.log(bucketStore.subscriptionUsage)
 }
 
 const isActiveRoute = (href: string) => {
@@ -37,7 +37,7 @@ const isActiveRoute = (href: string) => {
 }
 
 const storagePercentage = computed(() => {
-  return Number(bucketStore.storageUsagePercentage)
+  return bucketStore.storageUsagePercentage
 })
 
 const isStorageWarning = computed(() => {
@@ -73,7 +73,7 @@ const isStorageCritical = computed(() => {
       </section>
 
       <!-- Navigation -->
-      <section class="p-2 space-y-12">
+      <section class="p-3 space-y-12">
         <!-- Main Navigation -->
         <section>
           <ul class="space-y-2">
@@ -135,7 +135,7 @@ const isStorageCritical = computed(() => {
       </section>
 
       <!-- Storage Section -->
-      <section class="px-2 pt-40 border-border">
+      <section class="p-3 pt-40 border-border">
         <div
           v-if="bucketStore.subscriptionUsage"
           class="bg-background border-2 border-border rounded-base shadow-shadow p-3"
@@ -144,23 +144,18 @@ const isStorageCritical = computed(() => {
           ]"
         >
           <!-- Collapsed View -->
-          <div v-if="isCollapsed" class="flex justify-center">
-            <div class="relative">
-              <HardDrive
-                :class="[
-                  isStorageCritical
-                    ? 'text-red-500'
-                    : isStorageWarning
-                      ? 'text-yellow-500'
-                      : 'text-main',
-                ]"
-              />
-              <AlertTriangle
-                v-if="isStorageWarning"
-                class="absolute -top-1 -right-1 size-3 text-red-500"
-              />
-            </div>
-          </div>
+          <span
+            v-if="isCollapsed"
+            class="flex items-center justify-center"
+            :class="[
+              isStorageCritical
+                ? 'text-red-500'
+                : isStorageWarning
+                  ? 'text-yellow-500'
+                  : 'text-main',
+            ]"
+            >{{ bucketStore.subscriptionUsage.usagePercentage }}%</span
+          >
 
           <!-- Expanded View -->
           <div v-else class="space-y-2">
@@ -184,62 +179,48 @@ const isStorageCritical = computed(() => {
             </div>
 
             <!-- Progress Bar -->
-            <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-              <div
-                class="h-2 rounded-full transition-all duration-300"
-                :class="[
-                  isStorageCritical ? 'bg-red-500' : isStorageWarning ? 'bg-yellow-500' : 'bg-main',
-                ]"
-                :style="{ width: `${Math.min(storagePercentage, 100)}%` }"
-              ></div>
-            </div>
+            <Progress
+              :model-value="storagePercentage"
+              class="h-2"
+              :class="[
+                isStorageCritical
+                  ? '[&>div]:bg-red-500'
+                  : isStorageWarning
+                    ? '[&>div]:bg-yellow-500'
+                    : '[&>div]:bg-main',
+              ]"
+            />
 
             <!-- Storage Text -->
             <div class="text-xs text-foreground/70">
               <div class="flex justify-between items-center">
-                <span>{{ formatFileSize(bucketStore.subscriptionUsage.usedStorage) }}</span>
-                <span>{{ formatFileSize(bucketStore.subscriptionUsage.storageLimit) }}</span>
+                <span>{{
+                  convertBytesToFileSize(bucketStore.subscriptionUsage.usedStorage) || '0.0 MB'
+                }}</span>
+                <span>{{
+                  convertBytesToFileSize(bucketStore.subscriptionUsage.storageLimit)
+                }}</span>
               </div>
-              <div class="text-center mt-1">
-                <span
-                  class="font-medium"
-                  :class="[
-                    isStorageCritical
-                      ? 'text-red-500'
-                      : isStorageWarning
-                        ? 'text-yellow-500'
-                        : 'text-main',
-                  ]"
-                >
-                  {{ bucketStore.subscriptionUsage.usagePercentage }}% used
-                </span>
-              </div>
-            </div>
-
-            <!-- Warning Message -->
-            <div
-              v-if="isStorageWarning"
-              class="text-xs p-2 rounded-base"
-              :class="isStorageCritical ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700'"
-            >
-              <p v-if="isStorageCritical">⚠️ Storage almost full! Upgrade your plan.</p>
-              <p v-else>📊 Storage running low. Consider upgrading.</p>
+              <p
+                class="text-center"
+                :class="[
+                  isStorageCritical
+                    ? 'text-red-500'
+                    : isStorageWarning
+                      ? 'text-yellow-500'
+                      : 'text-main',
+                ]"
+              >
+                {{ bucketStore.subscriptionUsage.usagePercentage }}% used
+              </p>
             </div>
           </div>
         </div>
 
         <!-- Loading State -->
         <div v-else class="bg-background border-2 border-border rounded-base shadow-shadow p-3">
-          <div v-if="isCollapsed" class="flex justify-center">
-            <div class="size-6 bg-gray-200 rounded animate-pulse"></div>
-          </div>
-          <div v-else class="space-y-2">
-            <div class="flex items-center gap-2">
-              <div class="size-4 bg-gray-200 rounded animate-pulse"></div>
-              <div class="h-4 bg-gray-200 rounded animate-pulse flex-1"></div>
-            </div>
-            <div class="h-2 bg-gray-200 rounded animate-pulse"></div>
-            <div class="h-3 bg-gray-200 rounded animate-pulse"></div>
+          <div class="flex justify-center">
+            <Loader2 class="animate-spin size-6 bg-gray-200 rounded" />
           </div>
         </div>
       </section>

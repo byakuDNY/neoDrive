@@ -1,35 +1,27 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
-import { formatFileSize } from '@/lib/utils'
+import type { UploadItem } from '@/lib/types'
+import { convertBytesToFileSize } from '@/lib/utils'
 import { CheckCircle, File, Loader2, X, XCircle } from 'lucide-vue-next'
 import { computed } from 'vue'
 
-export interface UploadItem {
-  id: string
-  name: string
-  size: number
-  progress: number
-  status: 'pending' | 'uploading' | 'completed' | 'error'
-  error?: string
-}
-
-interface Props {
+const props = defineProps<{
   uploads: UploadItem[]
   isVisible: boolean
-}
-
-interface Emits {
+}>()
+const emit = defineEmits<{
   (e: 'cancel', id: string): void
   (e: 'dismiss'): void
-}
-
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+}>()
 
 const totalProgress = computed(() => {
   if (props.uploads.length === 0) return 0
   const totalPercent = props.uploads.reduce((sum, upload) => sum + upload.progress, 0)
   return Math.round(totalPercent / props.uploads.length)
+})
+
+const cancelledCount = computed(() => {
+  return props.uploads.filter((upload) => upload.status === 'cancelled').length
 })
 
 const completedCount = computed(() => {
@@ -43,7 +35,10 @@ const errorCount = computed(() => {
 const isCompleted = computed(() => {
   return (
     props.uploads.length > 0 &&
-    props.uploads.every((upload) => upload.status === 'completed' || upload.status === 'error')
+    props.uploads.every(
+      (upload) =>
+        upload.status === 'completed' || upload.status === 'error' || upload.status === 'cancelled',
+    )
   )
 })
 
@@ -101,6 +96,7 @@ const handleDismiss = () => {
         <div class="flex-shrink-0">
           <CheckCircle v-if="upload.status === 'completed'" class="text-green-500" />
           <XCircle v-else-if="upload.status === 'error'" class="text-red-500" />
+          <X v-else-if="upload.status === 'cancelled'" class="text-gray-500" />
           <Loader2 v-else class="animate-spin text-main" />
         </div>
 
@@ -109,7 +105,7 @@ const handleDismiss = () => {
           <div class="flex items-center justify-between">
             <span class="text-sm font-medium truncate">{{ upload.name }}</span>
             <span class="text-xs text-gray-500 ml-2">
-              {{ formatFileSize(upload.size) }}
+              {{ convertBytesToFileSize(upload.size) }}
             </span>
           </div>
 
@@ -138,6 +134,10 @@ const handleDismiss = () => {
           </div>
         </div>
 
+        <div v-if="upload.status === 'cancelled'" class="mt-1">
+          <p class="text-xs text-gray-500">Upload cancelled</p>
+        </div>
+
         <!-- Cancel Button -->
         <Button
           v-if="upload.status === 'uploading' || upload.status === 'pending'"
@@ -153,11 +153,11 @@ const handleDismiss = () => {
     <!-- Summary -->
     <div v-if="isCompleted" class="pt-2 border-t border-gray-200">
       <div class="flex items-center justify-between text-sm">
-        <span v-if="errorCount === 0" class="text-green-500">
+        <span v-if="errorCount === 0 && cancelledCount === 0" class="text-green-500">
           All {{ uploads.length }} files uploaded successfully!
         </span>
         <span v-else class="text-yellow-500">
-          {{ completedCount }} uploaded, {{ errorCount }} failed
+          {{ completedCount }} uploaded, {{ errorCount }} failed, {{ cancelledCount }} cancelled
         </span>
         <Button variant="neutral" size="sm" @click="handleDismiss"> Dismiss </Button>
       </div>

@@ -1,7 +1,8 @@
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import Fastify from "fastify";
-import Database from "./src/config/database";
+// import Database from "./src/config/database";
+import { connectToMongoDB } from "./src/lib/mongoConnection";
 import { validateS3BucketAccess } from "./src/lib/s3Client";
 import { CLEANUP_INTERVAL, cleanupExpiredSessions } from "./src/lib/session.js";
 import { authRoutes } from "./src/routes/authRoute";
@@ -10,21 +11,17 @@ import { stripeRoutes } from "./src/routes/stripeRoutes";
 import { userRoutes } from "./src/routes/userRoutes";
 import { webhookRoutes } from "./src/routes/webhookRoutes";
 
-const fastify = Fastify({
-  logger: {
-    transport: {
-      target: "pino-pretty",
-    },
-  },
-});
+const fastify = Fastify();
 
 const startServer = async () => {
   try {
-    await Database.connect();
+    // await Database.connect();
+    await connectToMongoDB();
 
     fastify.register(cors, {
       origin: ["http://localhost:5173", "https://neodrive-kappa.vercel.app"],
       credentials: true, // Important for cookies
+      methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], // Explicitly list methods
     });
 
     fastify.register(cookie);
@@ -52,7 +49,6 @@ const startServer = async () => {
 
     const s3Connected = await validateS3BucketAccess();
     if (!s3Connected) {
-      await Database.disconnect();
       process.exit(1);
     }
 
@@ -71,7 +67,6 @@ const startServer = async () => {
     console.log("   - STRIPE /api/stripe");
   } catch (err) {
     fastify.log.error(err);
-    await Database.disconnect();
     process.exit(1);
   }
 };

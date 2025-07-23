@@ -1,45 +1,38 @@
 <script setup lang="ts">
+import FilePreviewDialog from '@/components/FilePreviewDialog.vue'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import ViewDetails from '@/components/ViewDetails.vue'
+import ViewDetailsDialog from '@/components/ViewDetailsDialog.vue'
 import type { FileCategory, SelectFile } from '@/lib/types'
-import { formatFileSize } from '@/lib/utils'
+import { convertBytesToFileSize } from '@/lib/utils'
 import { useFileStore } from '@/stores/fileStore'
-import { Download, Eye, Heart, Loader2, MoreHorizontal, Trash2, Upload } from 'lucide-vue-next'
+import { Download, Eye, Heart, Loader2, MoreHorizontal, Trash2 } from 'lucide-vue-next'
 import { computed, ref, type Component } from 'vue'
-import { useRouter } from 'vue-router'
 
 const { category, icon } = defineProps<{
   category: FileCategory | 'favorites'
   icon: Component
 }>()
 
-const router = useRouter()
-const { getCategoryFiles, isPending, error, toggleFavorite } = useFileStore()
+const fileStore = useFileStore()
 
 const selectedFile = ref<SelectFile | null>(null)
 const showViewDetails = ref(false)
 const showFilePreview = ref(false)
-const categoryFiles = computed(() => getCategoryFiles(category))
+
+const categoryFiles = computed(() => fileStore.getCategoryFiles(category))
 
 const handleItemClick = (item: SelectFile) => {
-  // Handle file click - show preview for media files
-  if (
-    item.mimeType?.startsWith('image/') ||
-    item.mimeType?.startsWith('video/') ||
-    item.mimeType?.startsWith('audio/')
-  ) {
+  if (item.category === 'images' || item.category === 'videos' || item.category === 'audios') {
     selectedFile.value = item
     showFilePreview.value = true
   } else {
-    // For other files, download directly
-    handleDownload(item)
+    window.open(item.url!, '_blank')
   }
 }
 
@@ -48,18 +41,22 @@ const handleViewDetails = (item: SelectFile) => {
   showViewDetails.value = true
 }
 
-const handleDownload = (item: any) => {
-  if (item.url) {
-    const link = document.createElement('a')
-    link.href = item.url
-    link.download = item.name
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
+const handleDownload = async (item: SelectFile) => {
+  const response = await fetch(item.url!)
+  const blob = await response.blob()
+  const url = window.URL.createObjectURL(blob)
+
+  const link = document.createElement('a')
+  link.href = url
+  link.download = item.name
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+
+  window.URL.revokeObjectURL(url)
 }
 
-const handleDelete = (item: any) => {
+const handleDelete = (item: SelectFile) => {
   // Implement delete functionality
   console.log('Delete:', item.id)
 }
@@ -68,22 +65,15 @@ const handleDelete = (item: any) => {
 <template>
   <section class="p-4 md:p-8">
     <!-- Header -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-      <div class="flex items-center space-x-4 mb-3">
-        <div class="p-3 bg-background border-2 border-border rounded-base shadow-shadow">
-          <component :is="icon" class="size-8 text-main" />
-        </div>
-        <div>
-          <h1 class="text-2xl font-heading capitalize">{{ category }}</h1>
-          <p>View all your {{ category === 'favorites' ? 'favorite' : category }} files</p>
-          <p>{{ categoryFiles.length }} files</p>
-        </div>
+    <div class="flex items-center space-x-4 mb-3">
+      <div class="p-3 bg-background border-2 border-border rounded-base shadow-shadow">
+        <component :is="icon" class="size-8 text-main" />
       </div>
-
-      <Button @click="() => router.push('/dashboard')">
-        <Upload />
-        Upload
-      </Button>
+      <div>
+        <h1 class="text-2xl font-heading capitalize">{{ category }}</h1>
+        <p>View all your {{ category === 'favorites' ? 'favorite' : category }} files</p>
+        <p>{{ categoryFiles.length }} files</p>
+      </div>
     </div>
 
     <!-- Content -->
@@ -91,16 +81,16 @@ const handleDelete = (item: any) => {
       class="bg-background border-2 border-border rounded-base shadow-shadow overflow-hidden"
     >
       <!-- Loading State -->
-      <section v-if="isPending" class="p-12 text-center space-y-2">
+      <section v-if="fileStore.isPending" class="p-12 text-center space-y-2">
         <Loader2 class="animate-spin size-16 mx-auto" />
         <h2>Loading files...</h2>
       </section>
 
       <!-- Error State -->
-      <section v-else-if="error" class="p-12 text-center space-y-2 text-red-500">
+      <section v-else-if="fileStore.error" class="p-12 text-center space-y-2 text-red-500">
         <component :is="icon" class="size-16 mx-auto" />
         <h2>Error loading files</h2>
-        <p>{{ error.message }}</p>
+        <p>{{ fileStore.error.message }}</p>
       </section>
 
       <!-- Empty State -->
@@ -114,10 +104,6 @@ const handleDelete = (item: any) => {
               : `Upload some ${category} to get started`
           }}
         </p>
-        <Button v-if="category !== 'favorites'" @click="() => router.push('/dashboard')">
-          <Upload />
-          Upload Files
-        </Button>
       </section>
 
       <!-- Grid View -->
@@ -148,7 +134,7 @@ const handleDelete = (item: any) => {
                   <Download class="mr-2" />
                   Download
                 </DropdownMenuItem>
-                <DropdownMenuItem @click="toggleFavorite(item.id)" class="cursor-pointer">
+                <DropdownMenuItem @click="fileStore.toggleFavorite(item.id)" class="cursor-pointer">
                   <Heart class="mr-2" :class="{ 'fill-current text-red-500': item.isFavorited }" />
                   {{ item.isFavorited ? 'Remove from Favorites' : 'Add to Favorites' }}
                 </DropdownMenuItem>
@@ -180,7 +166,7 @@ const handleDelete = (item: any) => {
               {{ item.name }}
             </h3>
             <div class="flex justify-between items-center text-xs text-gray-500">
-              <span>{{ formatFileSize(item.size) }}</span>
+              <span>{{ convertBytesToFileSize(item.size) }}</span>
               <span>{{ new Date(item.updatedAt).toLocaleDateString() }}</span>
             </div>
           </div>
@@ -189,53 +175,17 @@ const handleDelete = (item: any) => {
     </section>
 
     <!-- File Preview Dialog -->
-    <Dialog v-model:open="showFilePreview">
-      <DialogContent class="max-w-4xl max-h-[90vh] overflow-auto">
-        <div v-if="selectedFile" class="space-y-4">
-          <h3 class="text-lg font-semibold">{{ selectedFile.name }}</h3>
-
-          <!-- Image Preview -->
-          <div v-if="selectedFile.mimeType?.startsWith('image/')" class="flex justify-center">
-            <img
-              :src="selectedFile.url!"
-              :alt="selectedFile.name"
-              class="max-w-full max-h-[60vh] object-contain rounded-lg"
-            />
-          </div>
-
-          <!-- Video Preview -->
-          <div v-else-if="selectedFile.mimeType?.startsWith('video/')" class="flex justify-center">
-            <video :src="selectedFile.url!" controls class="max-w-full max-h-[60vh] rounded-lg">
-              Your browser does not support the video tag.
-            </video>
-          </div>
-
-          <!-- Audio Preview -->
-          <div v-else-if="selectedFile.mimeType?.startsWith('audio/')" class="flex justify-center">
-            <audio :src="selectedFile.url!" controls class="w-full max-w-md">
-              Your browser does not support the audio tag.
-            </audio>
-          </div>
-
-          <div class="flex justify-between items-center pt-4 border-t">
-            <div class="text-sm text-gray-500">
-              {{ formatFileSize(selectedFile.size) }} •
-              {{ new Date(selectedFile.updatedAt).toLocaleDateString() }}
-            </div>
-            <Button @click="handleDownload(selectedFile)">
-              <Download class="mr-2" />
-              Download
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <FilePreviewDialog
+      :file="selectedFile"
+      v-model:open="showFilePreview"
+      @download="handleDownload"
+    />
 
     <!-- View Details Dialog -->
-    <Dialog v-model:open="showViewDetails">
-      <DialogContent>
-        <ViewDetails v-if="selectedFile" :file="selectedFile" />
-      </DialogContent>
-    </Dialog>
+    <ViewDetailsDialog
+      :file="selectedFile"
+      v-model:open="showViewDetails"
+      @download="handleDownload"
+    />
   </section>
 </template>

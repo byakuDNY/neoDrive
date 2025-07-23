@@ -15,15 +15,16 @@ const { isAuthenticated } = useAuthStore()
   <PublicHeader />
 
   <main>
+    <!-- Hero section -->
     <section class="relative py-20 lg:py-32">
       <div class="container mx-auto px-4 text-center">
         <h1 class="text-4xl md:text-6xl font-heading mb-6">
           Your Files, <span class="text-main">Anywhere</span>
         </h1>
-        <p class="text-xl md:text-2xl mb-8 max-w-3xl mx-auto text-foreground/80">
-          Store, sync, and share your files securely with neoDrive. The modern cloud storage
-          solution built for everyone.
-        </p>
+        <div class="text-xl md:text-2xl mb-8 max-w-3xl mx-auto text-foreground/80">
+          <p>Store your files securely with neoDrive</p>
+          <p>Your <span class="text-main">neo</span> cloud storage solution</p>
+        </div>
 
         <Button class="mb-12 text-lg px-8 py-6" asChild>
           <RouterLink :to="isAuthenticated ? '/dashboard' : '/signup'">
@@ -33,6 +34,7 @@ const { isAuthenticated } = useAuthStore()
       </div>
     </section>
 
+    <!-- Features section -->
     <section class="py-20 bg-secondary-background">
       <div class="container mx-auto px-4">
         <div class="text-center mb-16">
@@ -59,6 +61,7 @@ const { isAuthenticated } = useAuthStore()
       </div>
     </section>
 
+    <!-- Pricing section -->
     <section class="py-20">
       <div class="container mx-auto px-4">
         <div class="text-center mb-16">
@@ -98,16 +101,13 @@ const { isAuthenticated } = useAuthStore()
             </CardHeader>
 
             <CardContent class="space-y-6 flex flex-col h-full justify-between">
-              <div class="space-y-4">
-                <!-- Storage Feature -->
-                <div
-                  class="flex items-center gap-3 p-3 bg-main/5 border border-main/20 rounded-base"
-                >
-                  <Check class="size-5 text-main flex-shrink-0" />
-                  <div class="flex items-center gap-2">
-                    <span class="text-lg font-semibold">{{ plan.features }}</span>
-                    <span class="text-sm text-foreground/70">storage space</span>
-                  </div>
+              <div
+                class="space-y-4 flex items-center gap-3 p-3 bg-main/5 border border-main/20 rounded-base"
+              >
+                <Check class="size-5 text-main flex-shrink-0" />
+                <div class="flex items-center gap-2">
+                  <span class="text-lg font-semibold">{{ plan.features }}</span>
+                  <span class="text-sm text-foreground/70">storage space</span>
                 </div>
               </div>
 
@@ -116,7 +116,7 @@ const { isAuthenticated } = useAuthStore()
                 class="w-full py-6 text-base"
                 asChild
               >
-                <RouterLink :to="isAuthenticated ? '/dashboard' : '/signup'">
+                <RouterLink :to="isAuthenticated ? '/dashboard/subscriptions' : '/signup'">
                   {{ plan.cta }}
                 </RouterLink>
               </Button>
@@ -126,6 +126,7 @@ const { isAuthenticated } = useAuthStore()
       </div>
     </section>
 
+    <!-- CTA section -->
     <section class="py-20">
       <div class="container mx-auto px-4 text-center">
         <div class="max-w-4xl mx-auto">

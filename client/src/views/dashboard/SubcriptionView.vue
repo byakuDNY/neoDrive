@@ -2,6 +2,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
 import { PRICING_PLANS } from '@/lib/constants'
 import { useAuthStore } from '@/stores/authStore'
 import { useBucketStore } from '@/stores/bucketStore'
@@ -127,15 +128,16 @@ const handleManageBilling = () => {
           </div>
 
           <!-- Progress Bar -->
-          <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-            <div
-              class="h-3 rounded-full transition-all duration-300"
-              :class="[
-                isStorageCritical ? 'bg-red-500' : isStorageWarning ? 'bg-yellow-500' : 'bg-main',
-              ]"
-              :style="{ width: `${Math.min(storagePercentage, 100)}%` }"
-            ></div>
-          </div>
+          <Progress
+            :model-value="storagePercentage"
+            :class="[
+              isStorageCritical
+                ? '[&>div]:bg-red-500'
+                : isStorageWarning
+                  ? '[&>div]:bg-yellow-500'
+                  : '[&>div]:bg-main',
+            ]"
+          />
 
           <div class="flex justify-between items-center">
             <span class="text-sm text-foreground/70">{{ storagePercentage.toFixed(1) }}% used</span>
@@ -145,6 +147,7 @@ const handleManageBilling = () => {
             >
               <AlertCircle class="size-4" />
               {{ isStorageCritical ? 'Storage almost full!' : 'Storage running low' }}
+              asas
             </span>
           </div>
         </div>

@@ -20,17 +20,17 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Folder } from 'lucide-vue-next'
+import { Loader2, Upload } from 'lucide-vue-next'
 import { ref } from 'vue'
 
 const formSchema = toTypedSchema(
   z.object({
-    name: z.string().min(1).max(50),
+    name: z.string().min(2).max(50),
   }),
 )
 
 defineProps<{
-  isUploading: boolean
+  isLoading: boolean
 }>()
 
 const emit = defineEmits<{
@@ -49,9 +49,10 @@ function onSubmit(values: any) {
   <Form v-slot="{ handleSubmit }" as="" keep-values :validation-schema="formSchema">
     <Dialog v-model:open="isOpen">
       <DialogTrigger as-child>
-        <Button class="cursor-pointer" :disabled="isUploading">
-          <Folder />
-          {{ isUploading ? 'Uploading...' : 'Upload Folder' }}
+        <Button class="cursor-pointer" :disabled="isLoading" v-show="!isLoading">
+          <Loader2 v-if="isLoading" class="animate-spin" />
+          <Upload v-else />
+          {{ isLoading ? 'Uploading...' : 'Upload Folder' }}
         </Button>
       </DialogTrigger>
       <DialogContent class="sm:max-w-[425px]">
@@ -64,7 +65,12 @@ function onSubmit(values: any) {
             <FormItem>
               <FormLabel>Name</FormLabel>
               <FormControl>
-                <Input type="text" placeholder="Images" v-bind="componentField" />
+                <Input
+                  type="text"
+                  placeholder="Documents"
+                  v-bind="componentField"
+                  :disabled="isLoading"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -72,6 +78,7 @@ function onSubmit(values: any) {
         </form>
 
         <DialogFooter>
+          <Button variant="neutral" @click="isOpen = false" :disabled="isLoading"> Cancel </Button>
           <Button type="submit" form="dialogForm">Create</Button>
         </DialogFooter>
       </DialogContent>

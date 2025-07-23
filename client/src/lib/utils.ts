@@ -74,9 +74,19 @@ export const getFileInfo = (
   }
 }
 
-export const formatFileSize = (bytes: number) => {
+export const convertBytesToFileSize = (bytes: number) => {
   if (!bytes) return ''
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(1024))
   return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`
+}
+
+export const formattedDate = (date: Date) => {
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(date))
 }

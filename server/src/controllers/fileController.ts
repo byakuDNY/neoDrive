@@ -1,10 +1,20 @@
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+  CopyObjectCommand,
+  DeleteObjectCommand,
+  PutObjectCommand,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { ulid } from "ulidx";
 import { envConfig } from "../lib/envConfig";
 import { s3Client } from "../lib/s3Client";
-import { fileMetadataSchema, presignedUrlSchema } from "../lib/schemas";
+import {
+  deleteFileSchema,
+  favoriteFileSchema,
+  fileMetadataSchema,
+  presignedUrlSchema,
+  renameFileSchema,
+} from "../lib/schemas";
 import { getSession } from "../lib/session";
 import { calculateUsedStorage, SUBSCRIPTION_LIMITS } from "../lib/utils";
 import { File } from "../models/fileModel";
@@ -84,7 +94,7 @@ export const handlePresignedUrl = async (
     });
   }
 
-  const uniqueKey = `${session.id}${data.path}`;
+  const uniqueKey = `${session.id}${data.path}${data.name}`;
 
   try {
     const command = new PutObjectCommand({
@@ -109,7 +119,6 @@ export const handlePresignedUrl = async (
     });
   }
 };
-
 export const handleStoreFileMetadata = async (
   request: FastifyRequest,
   reply: FastifyReply
@@ -126,13 +135,16 @@ export const handleStoreFileMetadata = async (
     });
   }
 
-  if (data.userId !== session.id) {
-    return reply.status(403).send({ message: "You do not own this file" });
-  }
-
-  data.id = `${ulid()}-${data.name}`;
-
   try {
+    const existingFile = await File.findOne({ name: data.name });
+    if (existingFile) {
+      return reply.status(409).send({
+        message: "File already exists",
+      });
+    }
+
+    data.id = `${ulid()}_${data.name}`;
+
     await File.create(data);
 
     return reply.status(201).send({
@@ -142,6 +154,167 @@ export const handleStoreFileMetadata = async (
     console.error("Error saving file metadata:", error);
     return reply.status(500).send({
       message: "Failed to save file metadata",
+    });
+  }
+};
+
+export const handleRenameFile = async (
+  request: FastifyRequest,
+  reply: FastifyReply
+) => {
+  const { success, data } = renameFileSchema.safeParse(request.body);
+  if (!success) {
+    return reply.status(400).send({ message: "Invalid data" });
+  }
+
+  const session = getSession(request);
+  if (!session) {
+    return reply.status(401).send({
+      message: "Invalid session",
+    });
+  }
+
+  try {
+    const file = await File.findOne({ id: data.id });
+    if (!file) {
+      return reply.status(404).send({ message: "File not found" });
+    }
+
+    // Update database record
+    const updateDatabasePromise = File.updateOne(
+      { id: data.id },
+      { name: data.name }
+    );
+
+    // Update S3 object if it exists (copy to new name, then delete old)
+    let updateS3Promise: Promise<any> = Promise.resolve();
+    if (file.s3Key && file.type === "file") {
+      // Generate new S3 key with new filename
+      const newKey = `${session.id}_${ulid()}${file.path}${data.name}`;
+
+      const copyCommand = new CopyObjectCommand({
+        Bucket: envConfig.S3_BUCKET,
+        CopySource: `${envConfig.S3_BUCKET}/${file.s3Key}`,
+        Key: newKey,
+      });
+
+      const deleteCommand = new DeleteObjectCommand({
+        Bucket: envConfig.S3_BUCKET,
+        Key: file.s3Key,
+      });
+
+      updateS3Promise = s3Client.send(copyCommand).then(() => {
+        // Update the database with the new S3 key
+        return Promise.all([
+          s3Client.send(deleteCommand),
+          File.updateOne({ id: data.id }, { s3Key: newKey }),
+        ]);
+      });
+    }
+
+    await Promise.all([updateDatabasePromise, updateS3Promise]);
+
+    return reply.status(200).send({
+      message: "File renamed successfully",
+    });
+  } catch (error) {
+    console.error("Error renaming file: ", error);
+    return reply.status(500).send({
+      message: "Failed to rename file",
+    });
+  }
+};
+
+export const handleFavoriteFile = async (
+  request: FastifyRequest,
+  reply: FastifyReply
+) => {
+  const { success, data } = favoriteFileSchema.safeParse(request.body);
+  if (!success || data.type !== "file") {
+    return reply.status(400).send({ message: "Invalid data" });
+  }
+
+  const session = getSession(request);
+  if (!session) {
+    return reply.status(401).send({
+      message: "Invalid session",
+    });
+  }
+
+  try {
+    await File.findOneAndUpdate(
+      { id: data.id },
+      { isFavorited: !data.isFavorited }
+    );
+
+    return reply.status(200).send({
+      message: "File favorited successfully",
+    });
+  } catch (error) {
+    console.error("Error favorite file:", error);
+    return reply.status(500).send({
+      message: "Failed to favorite file",
+    });
+  }
+};
+
+export const handleDeleteFile = async (
+  request: FastifyRequest,
+  reply: FastifyReply
+) => {
+  const { success, data } = deleteFileSchema.safeParse(request.body);
+  if (!success) {
+    return reply.status(400).send({ message: "Invalid data" });
+  }
+
+  const session = getSession(request);
+  if (!session) {
+    return reply.status(401).send({
+      message: "Invalid session",
+    });
+  }
+
+  try {
+    const fileToDelete = await File.findOne({ id: data.id });
+    if (!fileToDelete) {
+      return reply.status(404).send({ message: "File not found" });
+    }
+
+    // If it's a folder, check if it contains any files
+    if (fileToDelete.type === "folder") {
+      const filesInFolder = await File.find({
+        userId: session.id,
+        path: `${fileToDelete.path}${fileToDelete.name}/`,
+      });
+
+      if (filesInFolder.length > 0) {
+        return reply.status(400).send({
+          message:
+            "Cannot delete folder that contains files. Please delete all files inside the folder first.",
+        });
+      }
+    }
+
+    const deleteFilePromise = File.findOneAndDelete({ id: data.id });
+
+    let deleteS3Promise: Promise<any> = Promise.resolve();
+    if (data.s3Key && data.type === "file") {
+      const command = new DeleteObjectCommand({
+        Bucket: envConfig.S3_BUCKET,
+        Key: data.s3Key,
+      });
+      deleteS3Promise = s3Client.send(command);
+    }
+
+    await Promise.all([deleteFilePromise, deleteS3Promise]);
+
+    return reply.status(200).send({
+      message: "File deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting file:", error);
+    return reply.status(500).send({
+      message: "Failed to delete file",
     });
   }
 };

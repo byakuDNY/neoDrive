@@ -26,6 +26,7 @@ const fileSchema = new mongoose.Schema(
       required: true,
       minLength: 2,
       maxlength: 255,
+      unique: true,
     },
     url: {
       type: String,
@@ -52,7 +53,7 @@ const fileSchema = new mongoose.Schema(
     path: {
       type: String,
       required: true,
-      minLength: 2,
+      minLength: 1,
       maxlength: 255,
     },
     isFavorited: {

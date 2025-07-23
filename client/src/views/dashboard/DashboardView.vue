@@ -1,20 +1,22 @@
 <script setup lang="ts">
 import CreateFolderDialog from '@/components/CreateFolderDialog.vue'
+import FilePreviewDialog from '@/components/FilePreviewDialog.vue'
+import RenameFileDialog from '@/components/RenameFileDialog.vue'
 import UploadProgress from '@/components/UploadProgress.vue'
+import ViewDetailsDialog from '@/components/ViewDetailsDialog.vue'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import ViewDetails from '@/components/ViewDetails.vue'
 import { useUpload } from '@/composables/useUpload'
 import type { SelectFile } from '@/lib/types'
-import { formatFileSize } from '@/lib/utils'
+import { convertBytesToFileSize } from '@/lib/utils'
 import { useFileStore } from '@/stores/fileStore'
 import {
+  AlertCircle,
   ChevronRight,
   Download,
   EllipsisVertical,
@@ -24,15 +26,15 @@ import {
   Heart,
   HomeIcon,
   Loader2,
+  RefreshCcw,
   Trash2,
   Upload,
-  AlertCircle,
   X,
-  RefreshCcw,
 } from 'lucide-vue-next'
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
+import { toast } from 'vue-sonner'
 
-const { getFilesByPath, isPending, error: fileStoreError, toggleFavorite, refetch } = useFileStore()
+const fileStore = useFileStore()
 const {
   handleUpload,
   isLoading,
@@ -42,18 +44,18 @@ const {
   cancelUpload,
   dismissProgress,
   clearError,
+  toggleProgress,
 } = useUpload()
 
 const currentPath = ref('/')
 const selectedFile = ref<SelectFile | null>(null)
+const showRenameDialog = ref(false)
 const showViewDetails = ref(false)
 const showFilePreview = ref(false)
 const fileInputRef = ref<HTMLInputElement>()
 
-// Get items for current path
 const currentItems = computed(() => {
-  const items = getFilesByPath(currentPath.value)
-
+  const items = fileStore.getFilesByPath(currentPath.value)
   return items.sort((a, b) => {
     if (a.type !== b.type) {
       return a.type === 'folder' ? -1 : 1
@@ -70,7 +72,7 @@ const breadcrumbPath = computed(() => {
   const breadcrumbs = []
 
   for (let i = 0; i < pathParts.length; i++) {
-    const path = '/' + pathParts.slice(0, i + 1).join('/')
+    const path = '/' + pathParts.slice(0, i + 1).join('/') + '/'
     const name = pathParts[i]
     breadcrumbs.push({ name, path })
   }
@@ -78,38 +80,33 @@ const breadcrumbPath = computed(() => {
   return breadcrumbs
 })
 
-const handleNavigateHome = () => {
+const redirectToHome = () => {
   currentPath.value = '/'
 }
 
-const handleNavigateToPath = (path: string) => {
-  currentPath.value = path
+const navigateToPath = (path: string) => {
+  currentPath.value = path.endsWith('/') ? path : `${path}/`
 }
 
-const handleItemClick = (item: SelectFile) => {
+const onFileSelect = (item: SelectFile) => {
   if (item.type === 'folder') {
-    currentPath.value = item.path
+    currentPath.value = item.path === '/' ? `/${item.name}/` : `${item.path}${item.name}/`
   } else {
-    // Handle file click - show preview for media files
-    if (
-      item.mimeType?.startsWith('image/') ||
-      item.mimeType?.startsWith('video/') ||
-      item.mimeType?.startsWith('audio/')
-    ) {
+    if (item.category === 'images' || item.category === 'videos' || item.category === 'audios') {
       selectedFile.value = item
       showFilePreview.value = true
     } else {
-      // For other files, download directly
-      handleDownload(item)
+      window.open(item.url!, '_blank')
     }
   }
 }
 
-const handleCreateFolder = async (name: string) => {
+const createNewFolder = async (name: string) => {
   try {
     await handleUpload(currentPath.value, 'folder', undefined, name)
   } catch (error) {
     console.error('Failed to create folder:', error)
+    toast.error('Failed to create folder')
   }
 }
 
@@ -129,39 +126,34 @@ const handleFileChange = async (event: Event) => {
   }
 }
 
-const handleViewDetails = (item: SelectFile) => {
+const viewFileDetails = (item: SelectFile) => {
   selectedFile.value = item
   showViewDetails.value = true
 }
 
-const handleDownload = (item: any) => {
-  if (item.url) {
-    const link = document.createElement('a')
-    link.href = item.url
-    link.download = item.name
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
+const handleRename = (item: SelectFile) => {
+  selectedFile.value = item
+  showRenameDialog.value = true
 }
 
-const handleDelete = (item: any) => {
-  // Implement delete functionality
-  console.log('Delete:', item.id)
+const downloadFile = async (item: SelectFile) => {
+  const response = await fetch(item.url!)
+  const blob = await response.blob()
+  const url = window.URL.createObjectURL(blob)
+
+  const link = document.createElement('a')
+  link.href = url
+  link.download = item.name
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+
+  window.URL.revokeObjectURL(url)
 }
 
-const handleUploadClick = () => {
+const onUploadButtonClick = () => {
   fileInputRef.value?.click()
 }
-
-// Auto-clear error after 10 seconds
-watch(uploadError, (newError) => {
-  if (newError) {
-    setTimeout(() => {
-      clearError()
-    }, 10000)
-  }
-})
 </script>
 
 <template>
@@ -180,11 +172,25 @@ watch(uploadError, (newError) => {
       </div>
 
       <div class="flex space-x-4">
-        <Button @click="refetch">
+        <Button @click="fileStore.refetch" variant="neutral">
           <RefreshCcw />
-          Refetch</Button
+        </Button>
+
+        <Button
+          v-if="uploads.length > 0"
+          @click="toggleProgress"
+          variant="neutral"
+          class="relative"
         >
-        <CreateFolderDialog :is-uploading="isLoading" @submit="handleCreateFolder" />
+          <Upload />
+          <span
+            class="absolute -top-1 -right-1 bg-main text-white rounded-full text-xs w-5 h-5 flex items-center justify-center"
+          >
+            {{ uploads.length }}
+          </span>
+        </Button>
+
+        <CreateFolderDialog :is-loading="isLoading" @submit="createNewFolder" />
         <input
           ref="fileInputRef"
           type="file"
@@ -194,8 +200,8 @@ watch(uploadError, (newError) => {
           class="hidden"
           :disabled="isLoading"
         />
-        <Button @click="handleUploadClick" :disabled="isLoading">
-          <Loader2 v-if="isLoading" />
+        <Button @click="onUploadButtonClick" :disabled="isLoading" v-show="!isLoading">
+          <Loader2 v-if="isLoading" class="animate-spin" />
           <Upload v-else />
           {{ isLoading ? 'Uploading...' : 'Upload Files' }}
         </Button>
@@ -233,7 +239,7 @@ watch(uploadError, (newError) => {
       <!-- Breadcrumb Navigation -->
       <nav class="border-b-2 border-border p-2">
         <div class="flex items-center space-x-2 overflow-x-auto">
-          <Button variant="neutral" class="m-1" @click="handleNavigateHome">root</Button>
+          <Button variant="neutral" class="m-1" @click="redirectToHome">root</Button>
 
           <div
             v-for="breadcrumb in breadcrumbPath"
@@ -243,7 +249,7 @@ watch(uploadError, (newError) => {
             <ChevronRight />
             <Button
               variant="neutral"
-              @click="handleNavigateToPath(breadcrumb.path)"
+              @click="navigateToPath(breadcrumb.path)"
               :title="breadcrumb.name"
               class="truncate max-w-[150px]"
             >
@@ -254,16 +260,16 @@ watch(uploadError, (newError) => {
       </nav>
 
       <!-- Loading State -->
-      <section v-if="isPending" class="p-12 text-center space-y-2">
+      <section v-if="fileStore.isPending" class="p-12 text-center space-y-2">
         <Loader2 class="animate-spin size-16 mx-auto" />
         <h2>Loading files...</h2>
       </section>
 
       <!-- Error State -->
-      <section v-else-if="fileStoreError" class="p-12 text-center space-y-2 text-red-500">
+      <section v-else-if="fileStore.error" class="p-12 text-center space-y-2 text-red-500">
         <Folder class="size-16 mx-auto" />
         <h2>Error loading files</h2>
-        <p>{{ fileStoreError.message }}</p>
+        <p>{{ fileStore.error.message }}</p>
       </section>
 
       <!-- Empty State -->
@@ -271,8 +277,9 @@ watch(uploadError, (newError) => {
         <Folder class="size-16 mx-auto" />
         <h2>You don't have any files</h2>
         <p>Upload some files to get started</p>
-        <Button @click="handleUploadClick" :disabled="isLoading">
-          <Upload />
+        <Button @click="onUploadButtonClick" :disabled="isLoading">
+          <Loader2 v-if="isLoading" class="animate-spin" />
+          <Upload v-else />
           Upload Files
         </Button>
       </section>
@@ -291,7 +298,7 @@ watch(uploadError, (newError) => {
           v-for="item in currentItems"
           :key="item.id"
           class="grid grid-cols-12 gap-4 items-center p-4 hover:bg-main cursor-pointer transition-colors group"
-          @click="handleItemClick(item)"
+          @click="onFileSelect(item)"
         >
           <!-- Name Column -->
           <div class="col-span-6 md:col-span-8 flex items-center">
@@ -310,7 +317,7 @@ watch(uploadError, (newError) => {
           <!-- Size Column -->
           <div class="col-span-3 md:col-span-2 text-center">
             <span v-if="item.type === 'file'" class="text-sm font-base">
-              {{ formatFileSize(item.size) }}
+              {{ convertBytesToFileSize(item.size) }}
             </span>
           </div>
 
@@ -323,23 +330,26 @@ watch(uploadError, (newError) => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem v-if="item.type === 'file'" @click="handleViewDetails(item)">
+                <DropdownMenuItem v-if="item.type === 'file'" @click="viewFileDetails(item)">
                   <Eye />
                   View Details
                 </DropdownMenuItem>
-                <DropdownMenuItem @click="">
+                <DropdownMenuItem @click="handleRename(item)">
                   <FolderPen />
                   Rename
                 </DropdownMenuItem>
-                <DropdownMenuItem v-if="item.type === 'file'" @click="handleDownload(item)">
+                <DropdownMenuItem v-if="item.type === 'file'" @click="downloadFile(item)">
                   <Download />
                   Download
                 </DropdownMenuItem>
-                <DropdownMenuItem v-if="item.type === 'file'" @click="toggleFavorite(item.id)">
+                <DropdownMenuItem
+                  v-if="item.type === 'file'"
+                  @click="fileStore.toggleFavorite(item)"
+                >
                   <Heart :class="{ 'fill-current text-red-500': item.isFavorited }" />
                   {{ item.isFavorited ? 'Remove from Favorites' : 'Add to Favorites' }}
                 </DropdownMenuItem>
-                <DropdownMenuItem @click="handleDelete(item)" class="text-red-500">
+                <DropdownMenuItem @click="fileStore.deleteFile(item)" class="text-red-500">
                   <Trash2 />
                   Delete
                 </DropdownMenuItem>
@@ -351,53 +361,23 @@ watch(uploadError, (newError) => {
     </section>
 
     <!-- File Preview Dialog -->
-    <Dialog v-model:open="showFilePreview">
-      <DialogContent class="max-w-4xl max-h-[90vh] overflow-auto">
-        <div v-if="selectedFile" class="space-y-4">
-          <h3 class="text-lg font-semibold">{{ selectedFile.name }}</h3>
-
-          <!-- Image Preview -->
-          <div v-if="selectedFile.mimeType?.startsWith('image/')" class="flex justify-center">
-            <img
-              :src="selectedFile.url!"
-              :alt="selectedFile.name"
-              class="max-w-full max-h-[60vh] object-contain rounded-lg"
-            />
-          </div>
-
-          <!-- Video Preview -->
-          <div v-else-if="selectedFile.mimeType?.startsWith('video/')" class="flex justify-center">
-            <video :src="selectedFile.url!" controls class="max-w-full max-h-[60vh] rounded-lg">
-              Your browser does not support the video tag.
-            </video>
-          </div>
-
-          <!-- Audio Preview -->
-          <div v-else-if="selectedFile.mimeType?.startsWith('audio/')" class="flex justify-center">
-            <audio :src="selectedFile.url!" controls class="w-full max-w-md">
-              Your browser does not support the audio tag.
-            </audio>
-          </div>
-
-          <div class="flex justify-between items-center pt-4 border-t">
-            <div class="text-sm text-gray-500">
-              {{ formatFileSize(selectedFile.size) }} •
-              {{ new Date(selectedFile.updatedAt).toLocaleDateString() }}
-            </div>
-            <Button @click="handleDownload(selectedFile)">
-              <Download />
-              Download
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <FilePreviewDialog
+      :file="selectedFile"
+      v-model:open="showFilePreview"
+      @download="downloadFile"
+    />
 
     <!-- View Details Dialog -->
-    <Dialog v-model:open="showViewDetails">
-      <DialogContent>
-        <ViewDetails v-if="selectedFile" :file="selectedFile" />
-      </DialogContent>
-    </Dialog>
+    <ViewDetailsDialog
+      :file="selectedFile"
+      v-model:open="showViewDetails"
+      @download="downloadFile"
+    />
+
+    <RenameFileDialog
+      :file="selectedFile"
+      :is-loading="isLoading"
+      v-model:open="showRenameDialog"
+    />
   </section>
 </template>

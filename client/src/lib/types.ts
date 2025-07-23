@@ -8,10 +8,13 @@ export type User = {
 }
 export type FileCategory = 'images' | 'videos' | 'audios' | 'documents' | 'others'
 export type SelectFile = {
+  _id: string
+  _v: number
   id: string
   userId: string
   name: string
   type: 'file' | 'folder'
+  s3Key: string | null
   size: number
   mimeType: string | null
   path: string
@@ -56,7 +59,7 @@ export type UploadItem = {
   name: string
   size: number
   progress: number
-  status: 'pending' | 'uploading' | 'completed' | 'error'
+  status: 'pending' | 'uploading' | 'completed' | 'error' | 'cancelled'
   error?: string
   file: File
 }
