@@ -47,10 +47,10 @@ const startServer = async () => {
       prefix: "/api/webhook",
     })
 
-    // const s3Connected = await validateS3BucketAccess();
-    // if (!s3Connected) {
-    //   process.exit(1);
-    // }
+    const s3Connected = await validateS3BucketAccess();
+    if (!s3Connected) {
+      process.exit(1);
+    }
 
     await fastify.listen({
       port: 3000,
