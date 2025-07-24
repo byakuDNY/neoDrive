@@ -2,9 +2,10 @@ import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import Fastify from "fastify";
 // import Database from "./src/config/database";
+import { CLEANUP_INTERVAL } from "./src/lib/constants";
 import { connectToMongoDB } from "./src/lib/mongoConnection";
 import { validateS3BucketAccess } from "./src/lib/s3Client";
-import { CLEANUP_INTERVAL, cleanupExpiredSessions } from "./src/lib/session.js";
+import { cleanupExpiredSessions } from "./src/lib/session.js";
 import { authRoutes } from "./src/routes/authRoute";
 import { fileRoutes } from "./src/routes/fileRoute";
 import { stripeRoutes } from "./src/routes/stripeRoutes";
@@ -44,9 +45,9 @@ const startServer = async () => {
       prefix: "/api/file",
     });
 
-    fastify.register(webhookRoutes,{
+    fastify.register(webhookRoutes, {
       prefix: "/api/webhook",
-    })
+    });
 
     fastify.register(paymentHistoryRoutes,{
       prefix: "/api/paymentHistories",

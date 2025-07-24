@@ -27,12 +27,6 @@ export const comparePassword = (
   );
 };
 
-export const SUBSCRIPTION_LIMITS = {
-  free: 200 * 1024 * 1024, // 200MB
-  pro: 10 * 1024 * 1024 * 1024, // 10GB
-  premium: 100 * 1024 * 1024 * 1024, // 100GB
-};
-
 export const calculateUsedStorage = async (userId: string) => {
   const userFiles = await File.find({ userId });
   const totalUsedStorage = userFiles.reduce(

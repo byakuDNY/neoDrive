@@ -27,6 +27,7 @@ export type SelectFile = {
 }
 
 export type PresignedUrl = {
+  userId: string
   name: string
   size: number
   mimeType: string | null

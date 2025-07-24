@@ -1,10 +1,7 @@
-import crypto from "crypto";
 import { FastifyReply, FastifyRequest } from "fastify";
+import { ulid } from "ulidx";
 import { IUser } from "../models/userModel";
-
-export const COOKIE_SESSION_KEY = "NEO_DRIVE_SESSION_ID";
-export const SESSION_EXPIRATION = 60 * 60 * 24 * 7; // 7 days
-export const CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour
+import { COOKIE_SESSION_KEY, SESSION_EXPIRATION } from "./constants";
 
 export const sessions = new Map<
   string,
@@ -31,7 +28,7 @@ export const getSession = (request: FastifyRequest) => {
 };
 
 export const createSession = (user: IUser, reply: FastifyReply) => {
-  const sessionId = crypto.randomBytes(32).toString("hex");
+  const sessionId = ulid();
 
   sessions.set(`session:${sessionId}`, {
     id: user.id,

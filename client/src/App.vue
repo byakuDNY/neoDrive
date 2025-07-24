@@ -4,7 +4,7 @@ import 'vue-sonner/style.css'
 </script>
 
 <template>
-  <Toaster position="top-center" rishColors />
+  <Toaster position="top-center" rich-colors />
   <main>
     <RouterView />
   </main>

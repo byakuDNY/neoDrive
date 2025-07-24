@@ -49,9 +49,9 @@ const {
 
 const currentPath = ref('/')
 const selectedFile = ref<SelectFile | null>(null)
-const showRenameDialog = ref(false)
 const showViewDetails = ref(false)
 const showFilePreview = ref(false)
+const showRenameDialog = ref(false)
 const fileInputRef = ref<HTMLInputElement>()
 
 const currentItems = computed(() => {
@@ -134,21 +134,6 @@ const viewFileDetails = (item: SelectFile) => {
 const handleRename = (item: SelectFile) => {
   selectedFile.value = item
   showRenameDialog.value = true
-}
-
-const downloadFile = async (item: SelectFile) => {
-  const response = await fetch(item.url!)
-  const blob = await response.blob()
-  const url = window.URL.createObjectURL(blob)
-
-  const link = document.createElement('a')
-  link.href = url
-  link.download = item.name
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-
-  window.URL.revokeObjectURL(url)
 }
 
 const onUploadButtonClick = () => {
@@ -338,7 +323,7 @@ const onUploadButtonClick = () => {
                   <FolderPen />
                   Rename
                 </DropdownMenuItem>
-                <DropdownMenuItem v-if="item.type === 'file'" @click="downloadFile(item)">
+                <DropdownMenuItem v-if="item.type === 'file'" @click="fileStore.downloadFile(item)">
                   <Download />
                   Download
                 </DropdownMenuItem>
@@ -349,7 +334,7 @@ const onUploadButtonClick = () => {
                   <Heart :class="{ 'fill-current text-red-500': item.isFavorited }" />
                   {{ item.isFavorited ? 'Remove from Favorites' : 'Add to Favorites' }}
                 </DropdownMenuItem>
-                <DropdownMenuItem @click="fileStore.deleteFile(item)" class="text-red-500">
+                <DropdownMenuItem @click="fileStore.removeFile(item)" class="text-red-500">
                   <Trash2 />
                   Delete
                 </DropdownMenuItem>
@@ -364,20 +349,16 @@ const onUploadButtonClick = () => {
     <FilePreviewDialog
       :file="selectedFile"
       v-model:open="showFilePreview"
-      @download="downloadFile"
+      @download="fileStore.downloadFile"
     />
 
     <!-- View Details Dialog -->
     <ViewDetailsDialog
       :file="selectedFile"
       v-model:open="showViewDetails"
-      @download="downloadFile"
+      @download="fileStore.downloadFile"
     />
 
-    <RenameFileDialog
-      :file="selectedFile"
-      :is-loading="isLoading"
-      v-model:open="showRenameDialog"
-    />
+    <RenameFileDialog :file="selectedFile" v-model:open="showRenameDialog" />
   </section>
 </template>

@@ -1,18 +1,20 @@
 import { FastifyReply, FastifyRequest } from "fastify";
+import stripe from "stripe";
 import { ulid } from "ulidx";
-import { loginSchema, signUpSchema } from "../lib/schemas";
-import { clearSession, createSession, getSession } from "../lib/session";
+import { ADMIN_CREDENTIALS } from "../lib/constants";
+import { adminLoginSchema, loginSchema, signUpSchema } from "../lib/schemas";
+import { clearSession, createSession } from "../lib/session";
+import { clearAdminSession, createAdminSession } from "../lib/sessionAdmin";
 import { comparePassword, generateSalt, hashPassword } from "../lib/utils";
 import { User } from "../models/userModel";
-import stripe from "stripe";
 
 const stripeClient = new stripe(
   process.env.STRIPE_SECRET_KEY ||
-  (() => {
-    throw new Error(
-      "STRIPE_SECRET_KEY is not defined in environment variables"
-    );
-  })()
+    (() => {
+      throw new Error(
+        "STRIPE_SECRET_KEY is not defined in environment variables"
+      );
+    })()
 );
 export const handleLogin = async (
   request: FastifyRequest,
@@ -37,7 +39,6 @@ export const handleLogin = async (
     if (!isPasswordCorrect) {
       return reply.status(401).send({ message: "Invalid password" });
     }
-    console.warn("creating session");
     createSession(user, reply);
 
     return reply.status(200).send({
@@ -75,9 +76,11 @@ export const handleSignup = async (
     const stripeCustomer = await stripeClient.customers.create({
       email: data.email,
       name: data.name,
-    })
-    if(!stripeCustomer.id) {
-      return reply.status(500).send({ message: "Failed to create Stripe customer" });
+    });
+    if (!stripeCustomer.id) {
+      return reply
+        .status(500)
+        .send({ message: "Failed to create Stripe customer" });
     }
     await User.create({
       id: `${data.name}_${ulid()}`,
@@ -97,29 +100,47 @@ export const handleSignup = async (
     return reply.status(500).send({ message: "Failed to create user" });
   }
 };
+export const handleLogout = (request: FastifyRequest, reply: FastifyReply) => {
+  const { message } = clearSession(request, reply);
+  return reply.status(200).send({ message });
+};
 
-export const handleGetSession = (
+export const handleAdminLogin = async (
   request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  const session = getSession(request);
-  if (!session) {
-    return reply.status(401).send({
-      message: "Invalid session",
-    });
+  const { success, data } = adminLoginSchema.safeParse(request.body);
+  if (!success) {
+    return reply.status(400).send({ message: "Invalid data" });
   }
 
-  return reply.status(200).send({
-    message: "Session retrieved successfully",
-    data: {
-      id: session.id,
-      name: session.name,
-      email: session.email,
-      subscription: session.subscription,
-    },
-  });
+  const adminUser = ADMIN_CREDENTIALS.find(
+    (admin) => admin.name === data.name && admin.password === data.password
+  );
+  if (!adminUser) {
+    return reply.status(401).send({ message: "Invalid admin credentials" });
+  }
+
+  try {
+    createAdminSession(adminUser.name, reply);
+
+    return reply.status(200).send({
+      message: "Admin login successful",
+      data: {
+        name: adminUser.name,
+        role: "admin",
+      },
+    });
+  } catch (error) {
+    console.error("Error in admin login:", error);
+    return reply.status(500).send({ message: "Failed to log in" });
+  }
 };
-export const handleLogout = (request: FastifyRequest, reply: FastifyReply) => {
-  const { message } = clearSession(request, reply);
+
+export const handleAdminLogout = (
+  request: FastifyRequest,
+  reply: FastifyReply
+) => {
+  const { message } = clearAdminSession(request, reply);
   return reply.status(200).send({ message });
 };

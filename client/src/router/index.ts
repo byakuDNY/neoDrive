@@ -1,5 +1,7 @@
 import DashboardLayout from '@/layout/DashboardLayout.vue'
 import { useAuthStore } from '@/stores/authStore'
+import DashboardAdmin from '@/views/admin/DashboardAdmin.vue'
+import LoginAdmin from '@/views/admin/LoginAdmin.vue'
 import CategoryView from '@/views/dashboard/CategoryView.vue'
 import DashboardView from '@/views/dashboard/DashboardView.vue'
 import SubcriptionView from '@/views/dashboard/SubcriptionView.vue'
@@ -87,16 +89,39 @@ const router = createRouter({
         },
       ],
     },
+    {
+      path: '/admin',
+      // meta: { requiresAuth: true },
+      children: [
+        {
+          path: 'login',
+          name: 'AdminLogin',
+          component: LoginAdmin,
+        },
+        {
+          path: 'dashboard',
+          name: 'AdminDashboard',
+          component: DashboardAdmin,
+        },
+      ],
+    },
   ],
 })
 
 router.beforeEach((to, from, next) => {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, isAdminAuthenticated } = useAuthStore()
 
+  // Handle regular user authentication
   if ((to.name === 'Login' || to.name === 'Signup') && isAuthenticated) {
     next({ name: 'Dashboard' })
   } else if (to.meta.requiresAuth && !isAuthenticated) {
     next({ name: 'Login' })
+  }
+  // Handle admin authentication
+  else if (to.name === 'AdminLogin' && isAdminAuthenticated) {
+    next({ name: 'AdminDashboard' })
+  } else if (to.meta.requiresAdminAuth && !isAdminAuthenticated) {
+    next({ name: 'AdminLogin' })
   } else {
     next()
   }

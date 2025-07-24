@@ -32,7 +32,6 @@ const formSchema = toTypedSchema(
 
 const props = defineProps<{
   file: SelectFile | null
-  isLoading?: boolean
 }>()
 
 const isOpen = defineModel<boolean>('open')
@@ -110,12 +109,7 @@ async function onSubmit(values: any) {
               <FormLabel>{{ props.file?.type === 'folder' ? 'Folder' : 'File' }} Name</FormLabel>
               <FormControl>
                 <div class="flex items-center gap-2">
-                  <Input
-                    type="text"
-                    v-bind="componentField"
-                    :disabled="isLoading"
-                    placeholder="Enter name..."
-                  />
+                  <Input type="text" v-bind="componentField" placeholder="Enter name..." />
                   <span v-if="fileExtension" class="text-sm text-gray-500 whitespace-nowrap">
                     {{ fileExtension }}
                   </span>
@@ -127,8 +121,8 @@ async function onSubmit(values: any) {
         </form>
 
         <DialogFooter>
-          <Button variant="neutral" @click="isOpen = false" :disabled="isLoading"> Cancel </Button>
-          <Button type="submit" form="renameForm" :disabled="isLoading"> Rename </Button>
+          <Button variant="neutral" @click="isOpen = false"> Cancel </Button>
+          <Button type="submit" form="renameForm"> Rename </Button>
         </DialogFooter>
       </Form>
     </DialogContent>

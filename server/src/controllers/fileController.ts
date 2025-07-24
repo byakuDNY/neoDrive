@@ -6,6 +6,7 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { ulid } from "ulidx";
+import { SUBSCRIPTION_LIMITS } from "../lib/constants";
 import { envConfig } from "../lib/envConfig";
 import { s3Client } from "../lib/s3Client";
 import {
@@ -16,7 +17,7 @@ import {
   renameFileSchema,
 } from "../lib/schemas";
 import { getSession } from "../lib/session";
-import { calculateUsedStorage, SUBSCRIPTION_LIMITS } from "../lib/utils";
+import { calculateUsedStorage } from "../lib/utils";
 import { File } from "../models/fileModel";
 
 export const handleGetFiles = async (
@@ -36,7 +37,6 @@ export const handleGetFiles = async (
     const filesWithUrls = files.map((file) => {
       let url = null;
 
-      // Only generate URLs for actual files (not folders)
       if (file.type === "file" && file.s3Key) {
         url = `http://localhost:9000/${envConfig.S3_BUCKET}/${file.s3Key}`;
       }
@@ -49,7 +49,7 @@ export const handleGetFiles = async (
 
     return reply.status(200).send({
       message: "Files retrieved successfully",
-      filesWithUrls,
+      files: filesWithUrls,
     });
   } catch (error) {
     console.error("Error retrieving files:", error);
@@ -71,6 +71,12 @@ export const handlePresignedUrl = async (
   if (!session) {
     return reply.status(401).send({
       message: "Invalid session",
+    });
+  }
+
+  if (data.userId !== session.id) {
+    return reply.status(403).send({
+      message: "Unauthorized",
     });
   }
 
@@ -135,8 +141,17 @@ export const handleStoreFileMetadata = async (
     });
   }
 
+  if (data.userId !== session.id) {
+    return reply.status(403).send({
+      message: "Unauthorized",
+    });
+  }
+
   try {
-    const existingFile = await File.findOne({ name: data.name });
+    const existingFile = await File.findOne({
+      name: data.name,
+      userId: data.userId,
+    });
     if (existingFile) {
       return reply.status(409).send({
         message: "File already exists",
@@ -174,15 +189,21 @@ export const handleRenameFile = async (
     });
   }
 
+  if (data.userId !== session.id) {
+    return reply.status(403).send({
+      message: "Unauthorized",
+    });
+  }
+
   try {
-    const file = await File.findOne({ id: data.id });
+    const file = await File.findOne({ id: data.id, userId: data.userId });
     if (!file) {
       return reply.status(404).send({ message: "File not found" });
     }
 
     // Update database record
     const updateDatabasePromise = File.updateOne(
-      { id: data.id },
+      { id: data.id, userId: data.userId },
       { name: data.name }
     );
 
@@ -207,7 +228,10 @@ export const handleRenameFile = async (
         // Update the database with the new S3 key
         return Promise.all([
           s3Client.send(deleteCommand),
-          File.updateOne({ id: data.id }, { s3Key: newKey }),
+          File.updateOne(
+            { id: data.id, userId: data.userId },
+            { s3Key: newKey }
+          ),
         ]);
       });
     }
@@ -241,19 +265,32 @@ export const handleFavoriteFile = async (
     });
   }
 
+  if (data.userId !== session.id) {
+    return reply.status(403).send({
+      message: "Unauthorized",
+    });
+  }
+
   try {
     await File.findOneAndUpdate(
-      { id: data.id },
+      { id: data.id, userId: data.userId },
       { isFavorited: !data.isFavorited }
     );
 
     return reply.status(200).send({
-      message: "File favorited successfully",
+      message: `File to ${
+        data.isFavorited === true ? "unfavorited" : "favorited"
+      } successfully`,
     });
   } catch (error) {
-    console.error("Error favorite file:", error);
+    console.error(
+      `Error to ${data.isFavorited === true ? "unfavorite" : "favorite"} file:`,
+      error
+    );
     return reply.status(500).send({
-      message: "Failed to favorite file",
+      message: `Failed to ${
+        data.isFavorited === true ? "unfavorite" : "favorite"
+      } file`,
     });
   }
 };
@@ -274,8 +311,17 @@ export const handleDeleteFile = async (
     });
   }
 
+  if (data.userId !== session.id) {
+    return reply.status(403).send({
+      message: "Unauthorized",
+    });
+  }
+
   try {
-    const fileToDelete = await File.findOne({ id: data.id });
+    const fileToDelete = await File.findOne({
+      id: data.id,
+      userId: data.userId,
+    });
     if (!fileToDelete) {
       return reply.status(404).send({ message: "File not found" });
     }
@@ -283,7 +329,7 @@ export const handleDeleteFile = async (
     // If it's a folder, check if it contains any files
     if (fileToDelete.type === "folder") {
       const filesInFolder = await File.find({
-        userId: session.id,
+        userId: data.userId,
         path: `${fileToDelete.path}${fileToDelete.name}/`,
       });
 
@@ -295,18 +341,18 @@ export const handleDeleteFile = async (
       }
     }
 
-    const deleteFilePromise = File.findOneAndDelete({ id: data.id });
+    await File.findOneAndDelete({
+      id: data.id,
+      userId: data.userId,
+    });
 
-    let deleteS3Promise: Promise<any> = Promise.resolve();
     if (data.s3Key && data.type === "file") {
       const command = new DeleteObjectCommand({
         Bucket: envConfig.S3_BUCKET,
         Key: data.s3Key,
       });
-      deleteS3Promise = s3Client.send(command);
+      await s3Client.send(command);
     }
-
-    await Promise.all([deleteFilePromise, deleteS3Promise]);
 
     return reply.status(200).send({
       message: "File deleted successfully",

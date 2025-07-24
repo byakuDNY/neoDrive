@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
 import {
-  handleGetSession,
+  handleAdminLogin,
+  handleAdminLogout,
   handleLogin,
   handleLogout,
   handleSignup,
@@ -12,7 +13,9 @@ export const authRoutes = async (fastify: FastifyInstance) => {
   fastify.post("/login", handleLogin);
   fastify.post("/signup", handleSignup);
   fastify.post("/logout", handleLogout);
-  fastify.get("/me", handleGetSession);
+
+  fastify.post("/admin/login", handleAdminLogin);
+  fastify.post("/admin/logout", handleAdminLogout);
 
   fastify.get("/debug/users", async () => {
     return await User.find();

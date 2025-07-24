@@ -66,6 +66,7 @@ const onSubmit = form.handleSubmit(async (values) => {
     if (!response.ok) {
       submitError.value = message ?? 'An unexpected error occurred while processing your request'
       console.error(response)
+      return
     }
 
     if (!isSignup.value) {

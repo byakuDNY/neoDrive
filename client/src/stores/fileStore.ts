@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/vue-query'
 import { defineStore } from 'pinia'
 import { computed } from 'vue'
 import { toast } from 'vue-sonner'
+import { useAuthStore } from './authStore'
 import { useBucketStore } from './bucketStore'
 
 const fetchFiles = async (): Promise<Omit<SelectFile, 'icon'>[]> => {
@@ -25,18 +26,26 @@ const fetchFiles = async (): Promise<Omit<SelectFile, 'icon'>[]> => {
     throw new Error(data.message ?? 'Failed to store file metadata')
   }
 
-  console.log('Files:', data.filesWithUrls)
+  console.log('Files:', data.files)
 
-  return data.filesWithUrls ?? []
+  return data.files ?? []
   // return MOCK_FILE_DATA
 }
 
 export const useFileStore = defineStore('file', () => {
   const bucketStore = useBucketStore()
+
+  const authStore = useAuthStore()
+
+  // Create a reactive computed for the query key
+  const queryKey = computed(() => ['files', authStore.session?.id])
+  const isEnabled = computed(() => !!authStore.session?.id)
+
   const { data, isPending, error, refetch } = useQuery({
-    queryKey: ['files'],
+    queryKey,
     queryFn: fetchFiles,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
+    enabled: isEnabled,
   })
 
   const allFiles = computed<SelectFile[]>(() => {
@@ -69,6 +78,7 @@ export const useFileStore = defineStore('file', () => {
   const renameFile = async (file: SelectFile, newName: string) => {
     const payload = {
       id: file.id,
+      userId: file.userId,
       name: newName,
       type: file.type,
       s3Key: file.s3Key ?? null,
@@ -90,7 +100,7 @@ export const useFileStore = defineStore('file', () => {
       if (!response.ok) {
         console.error('Rename failed:', data)
         toast.error(data.message ?? 'Failed to rename file')
-        return false
+        return
       }
 
       await refetch()
@@ -99,10 +109,12 @@ export const useFileStore = defineStore('file', () => {
       toast.error('Failed to rename file')
     }
   }
+
   const toggleFavorite = async (file: SelectFile) => {
     const isFavorited = file.isFavorited
     const payload = {
       id: file.id,
+      userId: file.userId,
       type: file.type,
       isFavorited: file.isFavorited,
     }
@@ -120,24 +132,37 @@ export const useFileStore = defineStore('file', () => {
       const data = await response.json()
 
       if (!response.ok) {
-        console.error(`Failed to ${isFavorited ? 'unfavorite' : 'favorite'} file: `, data)
-        toast.error(data.message ?? `Failed to ${isFavorited ? 'unfavorite' : 'favorite'} file`)
+        toast.error(data.message)
         return
       }
 
       await refetch()
-      toast.success(
-        data.message ?? `File ${isFavorited ? 'unfavorited' : 'favorited'} successfully`,
-      )
+      toast.success(data.message)
     } catch (error) {
       console.error(`Failed to ${isFavorited ? 'unfavorite' : 'favorite'} file: `, error)
       toast.error(`Failed to ${isFavorited ? 'unfavorite' : 'favorite'} file:`)
     }
   }
 
-  const deleteFile = async (file: SelectFile) => {
+  const downloadFile = async (item: SelectFile) => {
+    const response = await fetch(item.url!)
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+
+    const link = document.createElement('a')
+    link.href = url
+    link.download = item.name
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    window.URL.revokeObjectURL(url)
+  }
+
+  const removeFile = async (file: SelectFile) => {
     const payload = {
       id: file.id,
+      userId: file.userId,
       s3Key: file.s3Key ?? null,
       type: file.type,
     }
@@ -175,7 +200,8 @@ export const useFileStore = defineStore('file', () => {
     error,
     renameFile,
     toggleFavorite,
-    deleteFile,
+    downloadFile,
+    removeFile,
     refetch,
     getFilesByPath,
     getCategoryFiles,

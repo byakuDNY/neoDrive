@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import FilePreviewDialog from '@/components/FilePreviewDialog.vue'
+import RenameFileDialog from '@/components/RenameFileDialog.vue'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -11,7 +12,7 @@ import ViewDetailsDialog from '@/components/ViewDetailsDialog.vue'
 import type { FileCategory, SelectFile } from '@/lib/types'
 import { convertBytesToFileSize } from '@/lib/utils'
 import { useFileStore } from '@/stores/fileStore'
-import { Download, Eye, Heart, Loader2, MoreHorizontal, Trash2 } from 'lucide-vue-next'
+import { Download, Eye, FolderPen, Heart, Loader2, MoreHorizontal, Trash2 } from 'lucide-vue-next'
 import { computed, ref, type Component } from 'vue'
 
 const { category, icon } = defineProps<{
@@ -24,6 +25,7 @@ const fileStore = useFileStore()
 const selectedFile = ref<SelectFile | null>(null)
 const showViewDetails = ref(false)
 const showFilePreview = ref(false)
+const showRenameDialog = ref(false)
 
 const categoryFiles = computed(() => fileStore.getCategoryFiles(category))
 
@@ -41,24 +43,9 @@ const handleViewDetails = (item: SelectFile) => {
   showViewDetails.value = true
 }
 
-const handleDownload = async (item: SelectFile) => {
-  const response = await fetch(item.url!)
-  const blob = await response.blob()
-  const url = window.URL.createObjectURL(blob)
-
-  const link = document.createElement('a')
-  link.href = url
-  link.download = item.name
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-
-  window.URL.revokeObjectURL(url)
-}
-
-const handleDelete = (item: SelectFile) => {
-  // Implement delete functionality
-  console.log('Delete:', item.id)
+const handleRename = (item: SelectFile) => {
+  selectedFile.value = item
+  showRenameDialog.value = true
 }
 </script>
 
@@ -130,15 +117,22 @@ const handleDelete = (item: SelectFile) => {
                   <Eye class="mr-2" />
                   View Details
                 </DropdownMenuItem>
-                <DropdownMenuItem @click="handleDownload(item)" class="cursor-pointer">
+                <DropdownMenuItem @click="handleRename(item)">
+                  <FolderPen />
+                  Rename
+                </DropdownMenuItem>
+                <DropdownMenuItem @click="fileStore.downloadFile(item)" class="cursor-pointer">
                   <Download class="mr-2" />
                   Download
                 </DropdownMenuItem>
-                <DropdownMenuItem @click="fileStore.toggleFavorite(item.id)" class="cursor-pointer">
+                <DropdownMenuItem @click="fileStore.toggleFavorite(item)" class="cursor-pointer">
                   <Heart class="mr-2" :class="{ 'fill-current text-red-500': item.isFavorited }" />
                   {{ item.isFavorited ? 'Remove from Favorites' : 'Add to Favorites' }}
                 </DropdownMenuItem>
-                <DropdownMenuItem @click="handleDelete(item)" class="text-red-500 cursor-pointer">
+                <DropdownMenuItem
+                  @click="fileStore.removeFile(item)"
+                  class="text-red-500 cursor-pointer"
+                >
                   <Trash2 class="mr-2" />
                   Delete
                 </DropdownMenuItem>
@@ -178,14 +172,16 @@ const handleDelete = (item: SelectFile) => {
     <FilePreviewDialog
       :file="selectedFile"
       v-model:open="showFilePreview"
-      @download="handleDownload"
+      @download="fileStore.downloadFile"
     />
 
     <!-- View Details Dialog -->
     <ViewDetailsDialog
       :file="selectedFile"
       v-model:open="showViewDetails"
-      @download="handleDownload"
+      @download="fileStore.downloadFile"
     />
+
+    <RenameFileDialog :file="selectedFile" v-model:open="showRenameDialog" />
   </section>
 </template>

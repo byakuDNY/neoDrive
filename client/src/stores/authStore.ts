@@ -6,20 +6,36 @@ export const useAuthStore = defineStore(
   'auth',
   () => {
     const session = ref<User | null>(null)
+    const adminSession = ref<{ name: string; role: string } | null>(null)
+
     const isAuthenticated = computed(() => !!session.value)
+    const isAdminAuthenticated = computed(() => !!adminSession.value)
 
     const setSession = (user: User | null) => {
       session.value = user
     }
+
+    const setAdminSession = (admin: { name: string; role: string } | null) => {
+      adminSession.value = admin
+    }
+
     const clearSession = () => {
       session.value = null
     }
 
+    const clearAdminSession = () => {
+      adminSession.value = null
+    }
+
     return {
       session,
+      adminSession,
       isAuthenticated,
+      isAdminAuthenticated,
       setSession,
+      setAdminSession,
       clearSession,
+      clearAdminSession,
     }
   },
   {

@@ -94,6 +94,7 @@ export const useUpload = () => {
       uploadItem.status = 'uploading'
 
       const presignedUrlPayload: PresignedUrl = {
+        userId: session!.id,
         name: uploadItem.file.name,
         size: uploadItem.file.size,
         mimeType: uploadItem.file.type,
@@ -102,10 +103,6 @@ export const useUpload = () => {
       }
 
       const { presignedUrl, uniqueKey } = await getPresignedUrl(presignedUrlPayload)
-
-      await uploadFile(uploadItem.file, presignedUrl, uploadItem.id, (progress) => {
-        uploadItem.progress = progress
-      })
 
       const fileMetadata: FileMetadata = {
         s3Key: uniqueKey,
@@ -120,6 +117,10 @@ export const useUpload = () => {
       }
 
       await storeMetadata(fileMetadata)
+
+      await uploadFile(uploadItem.file, presignedUrl, uploadItem.id, (progress) => {
+        uploadItem.progress = progress
+      })
 
       // Mark as completed
       uploadItem.status = 'completed'

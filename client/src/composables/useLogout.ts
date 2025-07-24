@@ -20,10 +20,8 @@ export const useLogout = () => {
       const data = await response.json()
 
       if (response.ok) {
-        errorMessage.value = data.message || 'Logout failed'
+        errorMessage.value = data.message ?? 'Logout failed'
       }
-
-      console.info(data.message)
 
       const { clearSession } = useAuthStore()
       clearSession()

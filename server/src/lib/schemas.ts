@@ -16,6 +16,10 @@ export const signUpSchema = z
     message: "Passwords don't match",
     path: ["confirmPassword"],
   });
+export const adminLoginSchema = z.object({
+  name: z.string().min(2).max(32),
+  password: z.string().min(8).max(32),
+});
 
 export const nameChangeSchema = z.object({
   name: z
@@ -49,6 +53,7 @@ export const passwordChangeSchema = z
   });
 
 export const presignedUrlSchema = z.object({
+  userId: z.string().min(1).max(255),
   name: z.string().min(2).max(255),
   size: z.number().min(1),
   mimeType: z.string().min(1),
@@ -72,6 +77,7 @@ export const fileMetadataSchema = z.object({
 
 export const renameFileSchema = z.object({
   id: z.string().min(1).max(255),
+  userId: z.string().min(1).max(255),
   s3Key: z.string().min(1).max(255).nullable(),
   name: z.string().min(2).max(255),
   path: z.string().min(1).max(255),
@@ -80,12 +86,14 @@ export const renameFileSchema = z.object({
 
 export const favoriteFileSchema = z.object({
   id: z.string().min(1).max(255),
+  userId: z.string().min(1).max(255),
   type: z.enum(["file", "folder"]),
   isFavorited: z.boolean(),
 });
 
 export const deleteFileSchema = z.object({
   id: z.string().min(1).max(255),
+  userId: z.string().min(1).max(255),
   s3Key: z.string().min(1).max(255).nullable(),
   type: z.enum(["file", "folder"]),
 });

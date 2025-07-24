@@ -12,15 +12,17 @@ import { getInitials } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 import { LogOut } from 'lucide-vue-next'
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import ModeToggle from './ModeToggle.vue'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 import { Input } from './ui/input'
 
+const router = useRouter()
+
 const authStore = useAuthStore()
+const { logout } = useLogout()
 
 const session = computed(() => authStore.session)
-
-const { logout } = useLogout()
 </script>
 
 <template>
@@ -28,7 +30,11 @@ const { logout } = useLogout()
     <div class="flex justify-between p-4 space-x-2">
       <div></div>
 
-      <Input placeholder="Search..." class="max-w-60 lg:max-w-96" />
+      <Input
+        v-if="router.currentRoute.value.path !== '/dashboard'"
+        placeholder="Search..."
+        class="max-w-60 lg:max-w-96"
+      />
 
       <div class="space-x-4 flex items-center">
         <ModeToggle />
