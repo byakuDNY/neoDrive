@@ -10,6 +10,7 @@ import { fileRoutes } from "./src/routes/fileRoute";
 import { stripeRoutes } from "./src/routes/stripeRoutes";
 import { userRoutes } from "./src/routes/userRoutes";
 import { webhookRoutes } from "./src/routes/webhookRoutes";
+import { paymentHistoryRoutes } from "./src/routes/paymentHistoriesRoute";
 
 const fastify = Fastify();
 
@@ -47,6 +48,10 @@ const startServer = async () => {
       prefix: "/api/webhook",
     })
 
+    fastify.register(paymentHistoryRoutes,{
+      prefix: "/api/paymentHistories",
+    })
+
     const s3Connected = await validateS3BucketAccess();
     if (!s3Connected) {
       process.exit(1);
@@ -65,6 +70,7 @@ const startServer = async () => {
     console.log("   - CRUD /api/file");
     console.log("   - AUTH /api/auth");
     console.log("   - STRIPE /api/stripe");
+    console.log("   - GET /api/paymentHistories");
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
