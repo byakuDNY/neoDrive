@@ -117,6 +117,32 @@ export const handleCreateCheckoutSession = async (
         return reply.status(500).send({ message: "Failed to update subscription" });
       }
     }
+    // Handle downgrade from Premium to Pro
+    if (user.subscription == "Premium" && subscription.name == "Pro") {
+      try {
+        if (!user.subscriptionId) {
+          return reply.status(400).send({ message: "No active subscription found for downgrade" });
+        }
+        const currentSubscription = await stripeClient.subscriptions.retrieve(user.subscriptionId);
+        await stripeClient.subscriptions.update(user.subscriptionId, {
+          items: [{
+            id: currentSubscription.items.data[0].id,
+            price: subscription.stripeId,
+          }],
+          proration_behavior: "none",
+          metadata: {
+            ...currentSubscription.metadata,
+            pending_downgrade: "true",
+            downgrade_to: subscription.stripeId
+          }
+        });
+        return reply.status(200).send({ message: "Subscription downgrade scheduled successfully" });
+      } catch (error) {
+        console.error("Error during subscription downgrade:", error);
+        return reply.status(500).send({ message: "Failed to downgrade subscription" });
+
+      }
+    }
 
     const Stripesession = await stripeClient.checkout.sessions.create({
       payment_method_types: ["card"],

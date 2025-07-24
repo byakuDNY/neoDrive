@@ -3,6 +3,15 @@ import { SubscriptionPlan, User } from "../models/userModel";
 import { UserPaymentHistory } from "../models/userPaymentHistoryModel";
 import { Subscription } from "../models/subscriptionsModel";
 
+const stripeClient = new Stripe(
+  process.env.STRIPE_SECRET_KEY ||
+  (() => {
+    throw new Error(
+      "STRIPE_SECRET_KEY is not defined in environment variables"
+    );
+  })()
+);
+
 export const handleCompletedCheckout = async (session: Stripe.Checkout.Session) => {
   try {
     const userId = session.metadata?.userId;
@@ -41,25 +50,41 @@ export const handleCompletedCheckout = async (session: Stripe.Checkout.Session) 
     await user.save();
   } catch (error) {
     console.error('Error processing completed checkout:', error);
-    throw error;
   }
 };
 
-export const handleInvoicePaymentSucceeded = async (session: Stripe.Invoice) => {
+export const handleInvoicePaymentSucceeded = async (invoice: Stripe.Invoice) => {
   try {
-    const user = await User.findOne({ stripeCustomerId: session.customer as string });
+    const user = await User.findOne({ stripeCustomerId: invoice.customer as string });
     if (!user) {
       throw new Error('No user ID found in invoice metadata');
+    }
+    // Update the user's subscription if a downgrade is pending
+    const stripeSubscription = await stripeClient.subscriptions.retrieve(user.subscriptionId as string);
+    if (stripeSubscription.metadata.pending_downgrade === "true") {
+      const downgradeTo = stripeSubscription.metadata.downgrade_to;
+      const downgradedSubscription = await Subscription.findOne({ stripeId: downgradeTo });
+      if (!downgradedSubscription) {
+        throw new Error(`Downgrade subscription not found: ${downgradeTo}`);
+      }
+      user.subscription = downgradedSubscription.name as SubscriptionPlan;
+      await stripeClient.subscriptions.update(user.subscriptionId as string, {
+        metadata: {
+          ...stripeSubscription.metadata,
+          pending_downgrade: null,
+          downgrade_to: null
+        }
+      });
     }
     const subscription = await Subscription.findOne({ name: user.subscription });
     if (!subscription) {
       throw new Error(`Subscription plan not found: ${user.subscription}`);
-    }
+    };
     const paymentDate = new Date();
     await UserPaymentHistory.create({
       userId: user.id,
       subscriptionId: subscription?._id.toString(),
-      amount: session.amount_paid / 100,
+      amount: invoice.amount_paid / 100,
       paymentDate: paymentDate
     });
     const subscriptionEndDate = new Date();
@@ -68,6 +93,21 @@ export const handleInvoicePaymentSucceeded = async (session: Stripe.Invoice) => 
     await user.save();
   } catch (error) {
     console.error('Error processing invoice payment succeeded:', error);
-    throw error;
+  }
+}
+
+export const handleCancelledSubscription = async (subscription: Stripe.Subscription) => {
+  try {
+    const customerId = subscription.customer;
+    const user = await User.findOne({ stripeCustomerId: customerId as string });
+    if (!user) {
+      throw new Error(`User not found for customer ID: ${customerId}`);
+    }
+    user.subscription = 'Free';
+    user.SubscriptionEndDate = null;
+    user.subscriptionId = null;
+    await user.save();
+  } catch (error) {
+    console.error('Error processing cancelled subscription:', error);
   }
 }
