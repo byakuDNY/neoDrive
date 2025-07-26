@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import loginImage from '@/assets/login-image.svg'
 import AuthForm from '@/components/AuthForm.vue'
 import PublicHeader from '@/components/PublicHeader.vue'
 </script>
@@ -35,7 +34,7 @@ import PublicHeader from '@/components/PublicHeader.vue'
         <div class="flex items-center justify-center h-full p-12">
           <div class="text-center space-y-6">
             <img
-              :src="loginImage"
+              src="/login-image.svg"
               alt="Sign up illustration"
               class="w-full max-w-md mx-auto object-contain drop-shadow-lg drop-shadow-green-500"
             />

@@ -1,41 +1,69 @@
 import { FastifyReply, FastifyRequest } from "fastify";
-import { getSession, sessions } from "../lib/session";
 import { nameChangeSchema, passwordChangeSchema } from "../lib/schemas";
+import { getSession, sessions } from "../lib/session";
 import { comparePassword, generateSalt, hashPassword } from "../lib/utils";
 import { User } from "../models/userModel";
+
+const validateSession = async (
+  request: FastifyRequest,
+  reply: FastifyReply,
+  userId: string
+) => {
+  const session = getSession(request);
+  if (!session) {
+    reply.status(401).send({ message: "Invalid session" });
+    return;
+  }
+
+  if (session.id !== userId) {
+    reply.status(403).send({ message: "Unauthorized" });
+    return;
+  }
+
+  const user = await User.findOne({ id: session.id });
+  if (!user) {
+    reply.status(404).send({ message: "User not found" });
+    return;
+  }
+
+  return { session, user };
+};
 
 export const handleNameChange = async (
   request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  const { success, data } = nameChangeSchema.safeParse(request.body);
+  const { success, data, error } = nameChangeSchema.safeParse(request.body);
   if (!success) {
-    return reply.status(400).send({ message: "Invalid name changing data" });
+    return reply.status(400).send({
+      message: "Invalid data",
+      errors: error.errors,
+    });
   }
+
   try {
-    const session = getSession(request);
-    if (!session) {
-      return reply.status(401).send({ message: "Invalid session" });
+    const validation = await validateSession(request, reply, data.userId);
+    if (!validation) return;
+
+    const { session, user } = validation;
+    const newName = data.name;
+
+    if (user.name === newName) {
+      return reply.status(400).send({
+        message: "Name must be different from the current name",
+      });
     }
-    const user = await User.findOne({ id: session.id });
-    if (!user) {
-      return reply.status(404).send({ message: "User not found" });
-    }
-    if (user.name === data.name) {
-      return reply
-        .status(400)
-        .send({ message: "New name must be different to the previous name" });
-    }
-    user.name = data.name;
+
+    user.name = newName;
     await user.save();
-    session.name = data.name;
-    sessions.set(`session:${session.id}`, session);
+
+    const updatedSession = { ...session, name: newName };
+    sessions.set(`session:${session.id}`, updatedSession);
+
     return reply.status(200).send({
       message: "Name changed successfully",
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
+      data: {
+        name: newName,
       },
     });
   } catch (error) {
@@ -48,46 +76,50 @@ export const handlePasswordChange = async (
   request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  const { success, data } = passwordChangeSchema.safeParse(request.body);
+  const { success, data, error } = passwordChangeSchema.safeParse(request.body);
   if (!success) {
-    return reply
-      .status(400)
-      .send({ message: "Invalid password changing data" });
+    return reply.status(400).send({
+      message: "Invalid data",
+      errors: error.errors,
+    });
   }
+
   try {
-    const session = getSession(request);
-    if (!session) {
-      return reply.status(401).send({ message: "Invalid session" });
-    }
-    const user = await User.findOne({ id: session.id });
-    if (!user) {
-      return reply.status(404).send({ message: "User not found" });
-    }
-    const isPasswordCorrect = comparePassword(
+    const validation = await validateSession(request, reply, data.userId);
+    if (!validation) return;
+
+    const { user } = validation;
+
+    // Verify current password
+    const isCurrentPasswordCorrect = comparePassword(
       data.currentPassword,
       user.password,
       user.salt
     );
-    if (!isPasswordCorrect) {
-      return reply.status(401).send({ message: "Invalid current password" });
+    if (!isCurrentPasswordCorrect) {
+      return reply
+        .status(401)
+        .send({ message: "Current password is incorrect" });
     }
-    const isPasswordSameAsPrevious = comparePassword(
+
+    const isSamePassword = comparePassword(
       data.newPassword,
       user.password,
       user.salt
     );
-    if (isPasswordSameAsPrevious) {
-      return reply
-        .status(400)
-        .send({
-          message: "New password cannot be the same as the current password",
-        });
+    if (isSamePassword) {
+      return reply.status(400).send({
+        message: "New password must be different from the current password",
+      });
     }
+
     const newSalt = generateSalt();
     const hashedPassword = hashPassword(data.newPassword, newSalt);
+
     user.password = hashedPassword;
     user.salt = newSalt;
     await user.save();
+
     return reply.status(200).send({
       message: "Password changed successfully",
     });

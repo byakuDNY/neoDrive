@@ -16,39 +16,26 @@ export const signUpSchema = z
     message: "Passwords don't match",
     path: ["confirmPassword"],
   });
+
 export const adminLoginSchema = z.object({
   name: z.string().min(2).max(32),
   password: z.string().min(8).max(32),
 });
 
 export const nameChangeSchema = z.object({
-  name: z
-    .string()
-    .min(2)
-    .max(32)
-    .transform((val) => val.trim()),
+  name: z.string().min(2).max(32).trim(),
+  userId: z.string().min(1).max(255),
 });
 
 export const passwordChangeSchema = z
   .object({
-    currentPassword: z
-      .string()
-      .min(8)
-      .max(32)
-      .transform((val) => val.trim()),
-    newPassword: z
-      .string()
-      .min(8)
-      .max(32)
-      .transform((val) => val.trim()),
-    confirmNewPassword: z
-      .string()
-      .min(8)
-      .max(32)
-      .transform((val) => val.trim()),
+    currentPassword: z.string().min(8).max(32),
+    newPassword: z.string().min(8).max(32),
+    confirmNewPassword: z.string().min(8).max(32),
+    userId: z.string().min(1).max(255),
   })
   .refine((data) => data.newPassword === data.confirmNewPassword, {
-    message: "New passwords do not match",
+    message: "Passwords don't match",
     path: ["confirmNewPassword"],
   });
 

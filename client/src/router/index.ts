@@ -4,6 +4,7 @@ import DashboardAdmin from '@/views/admin/DashboardAdmin.vue'
 import LoginAdmin from '@/views/admin/LoginAdmin.vue'
 import CategoryView from '@/views/dashboard/CategoryView.vue'
 import DashboardView from '@/views/dashboard/DashboardView.vue'
+import ProfileView from '@/views/dashboard/ProfileView.vue'
 import SubcriptionView from '@/views/dashboard/SubcriptionView.vue'
 import HomeView from '@/views/HomeView.vue'
 import LoginView from '@/views/LoginView.vue'
@@ -87,11 +88,16 @@ const router = createRouter({
           name: 'Subscriptions',
           component: SubcriptionView,
         },
+        {
+          path: 'profile',
+          name: 'Profile',
+          component: ProfileView,
+        },
       ],
     },
     {
       path: '/admin',
-      // meta: { requiresAuth: true },
+      meta: { requiresAdminAuth: true },
       children: [
         {
           path: 'login',
@@ -120,7 +126,7 @@ router.beforeEach((to, from, next) => {
   // Handle admin authentication
   else if (to.name === 'AdminLogin' && isAdminAuthenticated) {
     next({ name: 'AdminDashboard' })
-  } else if (to.meta.requiresAdminAuth && !isAdminAuthenticated) {
+  } else if (to.meta.requiresAdminAuth && to.name !== 'AdminLogin' && !isAdminAuthenticated) {
     next({ name: 'AdminLogin' })
   } else {
     next()

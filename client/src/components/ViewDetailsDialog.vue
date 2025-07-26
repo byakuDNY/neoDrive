@@ -2,7 +2,7 @@
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import type { SelectFile } from '@/lib/types'
-import { convertBytesToFileSize, formattedDate } from '@/lib/utils'
+import { convertBytesToFileSize, formatDate } from '@/lib/utils'
 import { Check, Copy, Download } from 'lucide-vue-next'
 import { ref } from 'vue'
 
@@ -123,12 +123,12 @@ const copyToClipboard = async (text: string, key: string) => {
 
             <div class="space-y-2">
               <label class="text-sm font-medium text-gray-500">Created</label>
-              <p class="text-sm">{{ formattedDate(file.createdAt) }}</p>
+              <p class="text-sm">{{ formatDate(file.createdAt) }}</p>
             </div>
 
             <div class="space-y-2">
               <label class="text-sm font-medium text-gray-500">Modified</label>
-              <p class="text-sm">{{ formattedDate(file.updatedAt) }}</p>
+              <p class="text-sm">{{ formatDate(file.updatedAt) }}</p>
             </div>
           </div>
         </div>

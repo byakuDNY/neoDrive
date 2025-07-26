@@ -19,25 +19,30 @@ const fetchFiles = async (): Promise<Omit<SelectFile, 'icon'>[]> => {
     credentials: 'include',
   })
 
-  const data = await response.json()
-
+  const { message, files } = await response.json()
   if (!response.ok) {
-    console.error('Error retrieving files:', data.message)
-    throw new Error(data.message ?? 'Failed to store file metadata')
+    if (response.status === 401) {
+      const authStore = useAuthStore()
+      authStore.clearSession()
+
+      window.location.href = '/login'
+
+      toast.error('Session expired. Please log in again.')
+      return []
+    }
+    throw new Error(message ?? 'Failed to store file metadata')
   }
 
-  console.log('Files:', data.files)
+  console.log('Files:', files)
 
-  return data.files ?? []
+  return files ?? []
   // return MOCK_FILE_DATA
 }
 
 export const useFileStore = defineStore('file', () => {
   const bucketStore = useBucketStore()
-
   const authStore = useAuthStore()
 
-  // Create a reactive computed for the query key
   const queryKey = computed(() => ['files', authStore.session?.id])
   const isEnabled = computed(() => !!authStore.session?.id)
 
@@ -98,9 +103,12 @@ export const useFileStore = defineStore('file', () => {
       const data = await response.json()
 
       if (!response.ok) {
-        console.error('Rename failed:', data)
+        if (response.status === 401) {
+          onInvalidSession()
+          return
+        }
         toast.error(data.message ?? 'Failed to rename file')
-        return
+        throw new Error(data.message ?? 'Failed to rename file')
       }
 
       await refetch()
@@ -132,15 +140,21 @@ export const useFileStore = defineStore('file', () => {
       const data = await response.json()
 
       if (!response.ok) {
+        if (response.status === 401) {
+          onInvalidSession()
+          return
+        }
         toast.error(data.message)
-        return
+        throw new Error(
+          data.message ?? `Failed to ${isFavorited ? 'unfavorite' : 'favorite'} file: `,
+        )
       }
 
       await refetch()
       toast.success(data.message)
     } catch (error) {
-      console.error(`Failed to ${isFavorited ? 'unfavorite' : 'favorite'} file: `, error)
       toast.error(`Failed to ${isFavorited ? 'unfavorite' : 'favorite'} file:`)
+      throw error
     }
   }
 
@@ -180,18 +194,26 @@ export const useFileStore = defineStore('file', () => {
       const data = await response.json()
 
       if (!response.ok) {
-        console.error('Delete failed:', data)
+        if (response.status === 401) {
+          onInvalidSession()
+          return
+        }
         toast.error(data.message ?? 'Failed to delete file')
-        return
+        throw new Error(data.message ?? 'Failed to delete file')
       }
 
       toast.success(data.message ?? 'File deleted successfully')
       await refetch()
       await bucketStore.loadSubscriptionUsage()
     } catch (error) {
-      console.error('Delete error:', error)
       toast.error('Failed to delete file')
+      throw error
     }
+  }
+
+  const onInvalidSession = () => {
+    authStore.clearSession()
+    window.location.href = '/login'
   }
 
   return {

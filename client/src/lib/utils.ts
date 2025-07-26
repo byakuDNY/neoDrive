@@ -81,7 +81,7 @@ export const convertBytesToFileSize = (bytes: number) => {
   return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`
 }
 
-export const formattedDate = (date: Date) => {
+export const formatDate = (date: Date) => {
   return new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
     month: 'long',

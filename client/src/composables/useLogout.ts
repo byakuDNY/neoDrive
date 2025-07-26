@@ -1,5 +1,5 @@
 import { useAuthStore } from '@/stores/authStore'
-import { readonly, ref } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 export const useLogout = () => {
@@ -41,7 +41,7 @@ export const useLogout = () => {
 
   return {
     logout,
-    isLoggingOut: readonly(isLoading),
-    error: readonly(errorMessage),
+    isLoggingOut: isLoading,
+    error: errorMessage,
   }
 }
