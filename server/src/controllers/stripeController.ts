@@ -1,24 +1,12 @@
-import dotenv from "dotenv";
 import { FastifyReply, FastifyRequest } from "fastify";
-import stripe from "stripe";
-import { getSession } from "../lib/session";
 import {
   createCheckoutSessionSchema,
   createProductSchema,
 } from "../lib/schemas";
-import { User } from "../models/userModel";
-import { UserPaymentHistory } from "../models/userPaymentHistoryModel";
+import { stripeClient } from "../lib/stripe";
+import { validateSession } from "../lib/utils";
 import { Subscription } from "../models/subscriptionsModel";
-dotenv.config();
-
-const stripeClient = new stripe(
-  process.env.STRIPE_SECRET_KEY ||
-  (() => {
-    throw new Error(
-      "STRIPE_SECRET_KEY is not defined in environment variables"
-    );
-  })()
-);
+import { UserPaymentHistory } from "../models/userPaymentHistoryModel";
 
 export const handleCreateProduct = async (
   request: FastifyRequest,
@@ -68,39 +56,49 @@ export const handleCreateCheckoutSession = async (
     return reply.status(400).send({ message: "Invalid checkout session data" });
   }
   try {
-    const userSession = getSession(request);
-    if (!userSession) {
-      return reply.status(401).send({ message: "Invalid session" });
-    }
-    const user = await User.findOne({ id: userSession.id });
-    if (!user) {
-      return reply.status(404).send({ message: "User not found" });
-    }
+    const validation = await validateSession(request, reply, data.userId);
+    if (!validation) return;
 
     const subscription = await Subscription.findOne({ name: data.product });
     if (!subscription) {
       return reply.status(404).send({ message: "Subscription not found" });
     }
 
+    const { user } = validation;
     if (user.subscription == subscription.name) {
-      return reply.status(400).send({ message: "User already subscribed to this plan" });
+      return reply
+        .status(400)
+        .send({ message: "User already subscribed to this plan" });
     }
-    // Prorate payment when upgrading from Pro to Premium
+
+    // handle upgrade from Pro to Premium
     if (user.subscription == "Pro" && subscription.name == "Premium") {
       if (!user.subscriptionId) {
-        return reply.status(400).send({ message: "No active subscription found for upgrade" });
+        return reply
+          .status(400)
+          .send({ message: "No active subscription found for upgrade" });
       }
+
       try {
-        const currentSubscription = await stripeClient.subscriptions.retrieve(user.subscriptionId);
-        const updatedSubscription = await stripeClient.subscriptions.update(user.subscriptionId, {
-          items: [{
-            id: currentSubscription.items.data[0].id,
-            price: subscription.stripeId,
-          }],
-          proration_behavior: "create_prorations",
-        });
+        const currentSubscription = await stripeClient.subscriptions.retrieve(
+          user.subscriptionId
+        );
+        const updatedSubscription = await stripeClient.subscriptions.update(
+          user.subscriptionId,
+          {
+            items: [
+              {
+                id: currentSubscription.items.data[0].id,
+                price: subscription.stripeId,
+              },
+            ],
+            proration_behavior: "create_prorations",
+          }
+        );
+
         user.subscription = "Premium";
         await user.save();
+
         const paymentDate = new Date();
         await UserPaymentHistory.create({
           userId: user.id,
@@ -108,39 +106,53 @@ export const handleCreateCheckoutSession = async (
           amount: subscription.price,
           paymentDate: paymentDate,
         });
+
         return reply.status(200).send({
           message: "Subscription updated successfully",
-          subscription: updatedSubscription
+          subscription: updatedSubscription,
         });
       } catch (stripeError) {
         console.error("Stripe error during subscription update:", stripeError);
-        return reply.status(500).send({ message: "Failed to update subscription" });
+        return reply
+          .status(500)
+          .send({ message: "Failed to update subscription" });
       }
     }
     // Handle downgrade from Premium to Pro
     if (user.subscription == "Premium" && subscription.name == "Pro") {
+      if (!user.subscriptionId) {
+        return reply
+          .status(400)
+          .send({ message: "No active subscription found for downgrade" });
+      }
+
       try {
-        if (!user.subscriptionId) {
-          return reply.status(400).send({ message: "No active subscription found for downgrade" });
-        }
-        const currentSubscription = await stripeClient.subscriptions.retrieve(user.subscriptionId);
+        const currentSubscription = await stripeClient.subscriptions.retrieve(
+          user.subscriptionId
+        );
         await stripeClient.subscriptions.update(user.subscriptionId, {
-          items: [{
-            id: currentSubscription.items.data[0].id,
-            price: subscription.stripeId,
-          }],
+          items: [
+            {
+              id: currentSubscription.items.data[0].id,
+              price: subscription.stripeId,
+            },
+          ],
           proration_behavior: "none",
           metadata: {
             ...currentSubscription.metadata,
             pending_downgrade: "true",
-            downgrade_to: subscription.stripeId
-          }
+            downgrade_to: subscription.stripeId,
+          },
         });
-        return reply.status(200).send({ message: "Subscription downgrade scheduled successfully" });
+
+        return reply
+          .status(200)
+          .send({ message: "Subscription downgrade scheduled successfully" });
       } catch (error) {
         console.error("Error during subscription downgrade:", error);
-        return reply.status(500).send({ message: "Failed to downgrade subscription" });
-
+        return reply
+          .status(500)
+          .send({ message: "Failed to downgrade subscription" });
       }
     }
 
@@ -153,14 +165,15 @@ export const handleCreateCheckoutSession = async (
         },
       ],
       mode: "subscription",
-      success_url: `${data.successUrl}?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${data.cancelUrl}?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${data.successUrl}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${data.cancelUrl}&session_id={CHECKOUT_SESSION_ID}`,
       customer: user.stripeCustomerId,
       metadata: {
         userId: user.id,
         product: subscription.name,
       },
     });
+
     return reply.status(200).send({ url: Stripesession.url });
   } catch (error) {
     console.error("Error creating checkout session:", error);

@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useUpload } from '@/composables/useUpload'
 import type { SelectFile } from '@/lib/types'
-import { convertBytesToFileSize } from '@/lib/utils'
+import { formatBytes } from '@/lib/utils'
 import { useFileStore } from '@/stores/fileStore'
 import {
   AlertCircle,
@@ -302,7 +302,7 @@ const onUploadButtonClick = () => {
           <!-- Size Column -->
           <div class="col-span-3 md:col-span-2 text-center">
             <span v-if="item.type === 'file'" class="text-sm font-base">
-              {{ convertBytesToFileSize(item.size) }}
+              {{ formatBytes(item.size) }}
             </span>
           </div>
 

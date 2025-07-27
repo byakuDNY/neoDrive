@@ -2,7 +2,7 @@
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import type { SelectFile } from '@/lib/types'
-import { convertBytesToFileSize } from '@/lib/utils'
+import { formatBytes } from '@/lib/utils'
 import { Download } from 'lucide-vue-next'
 
 defineProps<{
@@ -48,7 +48,7 @@ defineEmits<{
         <!-- File info and actions -->
         <div class="flex justify-between items-center pt-4 border-t">
           <div class="text-sm text-gray-500">
-            {{ convertBytesToFileSize(file.size) }} •
+            {{ formatBytes(file.size) }} •
             {{ new Date(file.updatedAt).toLocaleDateString() }}
           </div>
           <Button @click="$emit('download', file)">

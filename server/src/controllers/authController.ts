@@ -1,21 +1,44 @@
 import { FastifyReply, FastifyRequest } from "fastify";
-import stripe from "stripe";
 import { ulid } from "ulidx";
 import { ADMIN_CREDENTIALS } from "../lib/constants";
 import { adminLoginSchema, loginSchema, signUpSchema } from "../lib/schemas";
 import { clearSession, createSession } from "../lib/session";
 import { clearAdminSession, createAdminSession } from "../lib/sessionAdmin";
-import { comparePassword, generateSalt, hashPassword } from "../lib/utils";
+import { stripeClient } from "../lib/stripe";
+import {
+  comparePassword,
+  generateSalt,
+  hashPassword,
+  validateSession,
+} from "../lib/utils";
 import { User } from "../models/userModel";
 
-const stripeClient = new stripe(
-  process.env.STRIPE_SECRET_KEY ||
-    (() => {
-      throw new Error(
-        "STRIPE_SECRET_KEY is not defined in environment variables"
-      );
-    })()
-);
+export const handleFetchUserData = async (
+  request: FastifyRequest,
+  reply: FastifyReply
+) => {
+  const { userId } = request.params as { userId: string };
+
+  try {
+    const validation = await validateSession(request, reply, userId);
+    if (!validation) return;
+
+    const { user } = validation;
+
+    return reply.status(200).send({
+      message: "User retrieved successfully",
+      data: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        subscription: user.subscription,
+      },
+    });
+  } catch (error) {
+    console.error("Error retrieving user:", error);
+    return reply.status(500).send({ message: "Failed to retrieve user" });
+  }
+};
 export const handleLogin = async (
   request: FastifyRequest,
   reply: FastifyReply
@@ -82,6 +105,7 @@ export const handleSignup = async (
         .status(500)
         .send({ message: "Failed to create Stripe customer" });
     }
+
     await User.create({
       id: `${data.name}_${ulid()}`,
       stripeCustomerId: stripeCustomer.id,

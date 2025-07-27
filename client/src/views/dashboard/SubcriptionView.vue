@@ -4,24 +4,35 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { PRICING_PLANS } from '@/lib/constants'
+import { formatBytes } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 import { useBucketStore } from '@/stores/bucketStore'
-import { AlertCircle, Crown, HardDrive, Star, TrendingUp, Zap } from 'lucide-vue-next'
-import { computed, onMounted } from 'vue'
+import {
+  AlertCircle,
+  CheckCircle,
+  Crown,
+  HardDrive,
+  Loader2,
+  Star,
+  TrendingUp,
+  X,
+  XCircle,
+  Zap,
+} from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
+import { toast } from 'vue-sonner'
 
 const bucketStore = useBucketStore()
 const authStore = useAuthStore()
 
-// Current subscription
-const currentPlan = computed(() => {
-  return authStore.session?.subscription || 'free'
-})
+const showPaymentResult = ref(true)
+const paymentSuccess = ref(false)
+const paymentMessage = ref('')
+const isUpgrading = ref(false)
 
-const currentPlanDetails = computed(() => {
-  return (
-    PRICING_PLANS.find((plan) => plan.name.toLowerCase() === currentPlan.value.toLowerCase()) ||
-    PRICING_PLANS[0]
-  )
+const currentPlan = computed(() => {
+  const subscription = authStore.session?.subscription || 'Free'
+  return PRICING_PLANS.find((plan) => plan.name === subscription)
 })
 
 // Storage calculations
@@ -45,32 +56,91 @@ const isStorageCritical = computed(() => {
   return storagePercentage.value > 95
 })
 
-// Format bytes helper
-const formatBytes = (bytes: number) => {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-}
-
-// Get plan key from plan name
-const getPlanKey = (planName: string) => {
-  return planName.toLowerCase()
-}
-
 onMounted(async () => {
   await bucketStore.loadSubscriptionUsage()
+
+  // Check for payment result in URL
+  const urlParams = new URLSearchParams(window.location.search)
+
+  if (urlParams.get('success') === 'true') {
+    showPaymentResult.value = true
+    paymentSuccess.value = true
+    paymentMessage.value = 'Payment successful! Your subscription has been updated.'
+
+    // Refresh user session to get updated subscription
+    await authStore.checkSession()
+    toast.success('Payment successful! Your subscription has been updated.')
+
+    // Clean up URL
+    window.history.replaceState({}, document.title, window.location.pathname)
+  } else if (urlParams.get('canceled') === 'true') {
+    showPaymentResult.value = true
+    paymentSuccess.value = false
+    paymentMessage.value = 'Payment was canceled. No charges were made to your account.'
+
+    toast.info('Payment was canceled. You can try again anytime.')
+
+    // Clean up URL
+    window.history.replaceState({}, document.title, window.location.pathname)
+  }
 })
 
-const handleUpgrade = (planName: string) => {
-  console.log(`Upgrading to ${planName}`)
-  // Implement upgrade logic here
+const handleUpgrade = async (planName: string) => {
+  try {
+    isUpgrading.value = true
+
+    const response = await fetch(`/api/stripe/checkout`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        product: planName,
+        successUrl: `${window.location.origin}/dashboard/subscription?success=true`,
+        cancelUrl: `${window.location.origin}/dashboard/subscription?canceled=true`,
+        userId: authStore.session?.id,
+      }),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        authStore.clearSession()
+        window.location.href = '/login'
+        toast.error('Session expired. Please log in again.')
+        return
+      }
+      throw new Error(data.message || 'Failed to create checkout session')
+    }
+
+    // Redirect to Stripe Checkout
+    if (data.url) {
+      window.location.href = data.url
+    } else {
+      throw new Error('No checkout URL received')
+    }
+  } catch (error) {
+    console.error('Upgrade error:', error)
+    toast.error(error instanceof Error ? error.message : 'Failed to start upgrade process')
+  } finally {
+    isUpgrading.value = false
+  }
 }
 
-const handleManageBilling = () => {
-  console.log('Managing billing')
-  // Implement billing management
+const canUpgrade = (planName: string) => {
+  const currentPlanIndex = PRICING_PLANS.findIndex((plan) => plan.name === currentPlan.value?.name)
+  const targetPlanIndex = PRICING_PLANS.findIndex((plan) => plan.name === planName)
+
+  return targetPlanIndex > currentPlanIndex
+}
+
+const canDowngrade = (planName: string) => {
+  const currentPlanIndex = PRICING_PLANS.findIndex((plan) => plan.name === currentPlan.value?.name)
+  const targetPlanIndex = PRICING_PLANS.findIndex((plan) => plan.name === planName)
+
+  return targetPlanIndex < currentPlanIndex
 }
 </script>
 
@@ -88,20 +158,53 @@ const handleManageBilling = () => {
           variant="outline"
           class="text-sm px-3 py-1"
           :class="
-            currentPlan === 'premium'
+            currentPlan?.name === 'Premium'
               ? 'border-yellow-500 text-yellow-700'
-              : currentPlan === 'pro'
+              : currentPlan?.name === 'Pro'
                 ? 'border-blue-500 text-blue-700'
                 : 'border-gray-500 text-gray-700'
           "
         >
-          <Crown v-if="currentPlan === 'premium'" class="size-3 mr-1" />
-          <Star v-else-if="currentPlan === 'pro'" class="size-3 mr-1" />
+          <Crown v-if="currentPlan?.name === 'Premium'" class="size-3 mr-1" />
+          <Star v-else-if="currentPlan?.name === 'Pro'" class="size-3 mr-1" />
           <Zap v-else class="size-3 mr-1" />
-          {{ currentPlanDetails.name }} Plan
+          {{ currentPlan?.name }} Plan
         </Badge>
       </div>
     </div>
+
+    <!-- Payment Result Card -->
+    <Card
+      v-if="showPaymentResult"
+      class="bg-green-50"
+      :class="paymentSuccess ? 'border-green-500 ' : 'border-red-500 '"
+    >
+      <CardContent>
+        <div class="flex items-center justify-between">
+          <!-- Success State -->
+          <div v-if="paymentSuccess" class="flex items-center gap-3">
+            <CheckCircle class="text-green-500 size-8" />
+            <div>
+              <h3 class="text-lg font-semibold text-green-800">Payment Successful!</h3>
+              <p class="text-green-500">{{ paymentMessage }}</p>
+            </div>
+          </div>
+
+          <!-- Error State -->
+          <div v-else class="flex items-center gap-3">
+            <XCircle class="text-red-500 size-8" />
+            <div>
+              <h3 class="text-lg font-semibold text-red-800">Payment Canceled</h3>
+              <p class="text-red-500">{{ paymentMessage }}</p>
+            </div>
+          </div>
+
+          <Button @click="() => (showPaymentResult = false)" variant="neutral">
+            <X />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
 
     <!-- Current Plan Overview -->
     <Card class="border-2 border-border rounded-base shadow-shadow">
@@ -114,14 +217,13 @@ const handleManageBilling = () => {
             </CardTitle>
             <CardDescription>Your current storage usage and plan details</CardDescription>
           </div>
-          <Button variant="neutral" @click="handleManageBilling"> Manage Billing </Button>
         </div>
       </CardHeader>
       <CardContent class="space-y-6">
         <!-- Storage Usage -->
         <div class="space-y-4">
           <div class="flex justify-between items-center">
-            <span class="text-lg font-medium">{{ currentPlanDetails.name }} Plan</span>
+            <span class="text-lg font-medium">{{ currentPlan?.name }} Plan</span>
             <span class="text-lg font-mono">
               {{ formatBytes(storageUsed) }} / {{ formatBytes(storageTotal) }}
             </span>
@@ -147,7 +249,6 @@ const handleManageBilling = () => {
             >
               <AlertCircle class="size-4" />
               {{ isStorageCritical ? 'Storage almost full!' : 'Storage running low' }}
-              asas
             </span>
           </div>
         </div>
@@ -195,9 +296,7 @@ const handleManageBilling = () => {
           :key="plan.name"
           class="border-2 border-border rounded-base shadow-shadow relative transition-all duration-200"
           :class="[
-            getPlanKey(plan.name) === currentPlan
-              ? 'ring-2 ring-main bg-main/5'
-              : 'hover:shadow-lg',
+            plan.name === currentPlan?.name ? 'ring-2 ring-main bg-main/5' : 'hover:shadow-lg',
             plan.popular ? 'scale-105 border-blue-500' : '',
             plan.name === 'Premium' ? 'border-yellow-500' : '',
           ]"
@@ -247,21 +346,27 @@ const handleManageBilling = () => {
             </div>
 
             <!-- Current Plan Indicator -->
-            <div v-if="getPlanKey(plan.name) === currentPlan" class="text-center">
+            <div v-if="plan.name === currentPlan?.name" class="text-center">
               <Badge variant="default" class="px-4 py-2"> Current Plan </Badge>
             </div>
 
             <!-- Action Button -->
             <Button
               v-else
-              @click="handleUpgrade(getPlanKey(plan.name))"
+              @click="handleUpgrade(plan.name)"
+              :disabled="isUpgrading || (!canUpgrade(plan.name) && !canDowngrade(plan.name))"
               class="w-full"
               :variant="
                 plan.name === 'Pro' ? 'default' : plan.name === 'Premium' ? 'default' : 'neutral'
               "
               :class="plan.name === 'Premium' ? 'bg-yellow-500 hover:bg-yellow-600' : ''"
             >
-              {{ plan.name === 'Free' ? 'Downgrade' : 'Upgrade' }} to {{ plan.name }}
+              <Loader2 v-if="isUpgrading" class="size-4 mr-2 animate-spin" />
+              <template v-if="canUpgrade(plan.name)"> Upgrade to {{ plan.name }} </template>
+              <template v-else-if="canDowngrade(plan.name)">
+                Downgrade to {{ plan.name }}
+              </template>
+              <template v-else> {{ plan.name }} Plan </template>
             </Button>
           </CardContent>
         </Card>

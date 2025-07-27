@@ -84,8 +84,8 @@ const router = createRouter({
           props: { category: 'favorites', icon: HeartIcon },
         },
         {
-          path: 'subscriptions',
-          name: 'Subscriptions',
+          path: 'subscription',
+          name: 'Subscription',
           component: SubcriptionView,
         },
         {

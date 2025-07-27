@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import {
   handleAdminLogin,
   handleAdminLogout,
+  handleFetchUserData,
   handleLogin,
   handleLogout,
   handleSignup,
@@ -10,6 +11,7 @@ import { sessions } from "../lib/session";
 import { User } from "../models/userModel";
 
 export const authRoutes = async (fastify: FastifyInstance) => {
+  fastify.get("/me/:userId", handleFetchUserData);
   fastify.post("/login", handleLogin);
   fastify.post("/signup", handleSignup);
   fastify.post("/logout", handleLogout);

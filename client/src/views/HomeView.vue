@@ -116,7 +116,7 @@ const { isAuthenticated } = useAuthStore()
                 class="w-full py-6 text-base"
                 asChild
               >
-                <RouterLink :to="isAuthenticated ? '/dashboard/subscriptions' : '/signup'">
+                <RouterLink :to="isAuthenticated ? '/dashboard/subscription' : '/signup'">
                   {{ plan.cta }}
                 </RouterLink>
               </Button>

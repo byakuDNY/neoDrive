@@ -1,10 +1,11 @@
 import type { Component } from 'vue'
 
+type SubscriptionPlan = 'Free' | 'Pro' | 'Premium'
 export type User = {
   id: string
   name: string
   email: string
-  subscription: string
+  subscription: SubscriptionPlan
 }
 export type FileCategory = 'images' | 'videos' | 'audios' | 'documents' | 'others'
 export type SelectFile = {
@@ -52,7 +53,7 @@ export type SubscriptionUsage = {
   storageLimit: number
   remainingStorage: number
   usagePercentage: number
-  subscription: 'free' | 'pro' | 'premium'
+  subscription: SubscriptionPlan
 }
 
 export type UploadItem = {

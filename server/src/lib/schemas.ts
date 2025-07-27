@@ -86,11 +86,7 @@ export const deleteFileSchema = z.object({
 });
 
 export const createProductSchema = z.object({
-  name: z
-    .string()
-    .min(1)
-    .max(100)
-    .transform((val) => val.trim()),
+  name: z.string().min(1).max(100).trim(),
   price: z.number().positive(),
 });
 
@@ -98,4 +94,5 @@ export const createCheckoutSessionSchema = z.object({
   product: z.string(),
   successUrl: z.string(),
   cancelUrl: z.string(),
+  userId: z.string().min(1).max(255),
 });

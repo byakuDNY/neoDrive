@@ -88,7 +88,7 @@ export const MAIN_NAVIGATION = [
 
 export const SECONDARY_NAVIGATION = [
   { name: 'Favorites', href: '/dashboard/favorites', icon: HeartIcon },
-  { name: 'Subscriptions', href: '/dashboard/subscriptions', icon: BellIcon },
+  { name: 'Subscriptions', href: '/dashboard/subscription', icon: BellIcon },
 ]
 
 import type { SelectFile } from './types'

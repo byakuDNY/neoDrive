@@ -74,7 +74,7 @@ export const getFileInfo = (
   }
 }
 
-export const convertBytesToFileSize = (bytes: number) => {
+export const formatBytes = (bytes: number) => {
   if (!bytes) return ''
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(1024))

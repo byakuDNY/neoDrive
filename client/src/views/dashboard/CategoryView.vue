@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/select'
 import ViewDetailsDialog from '@/components/ViewDetailsDialog.vue'
 import type { FileCategory, SelectFile } from '@/lib/types'
-import { convertBytesToFileSize } from '@/lib/utils'
+import { formatBytes } from '@/lib/utils'
 import { useFileStore } from '@/stores/fileStore'
 import {
   Download,
@@ -239,7 +239,7 @@ const getSortLabel = (value: string) => {
               {{ item.name }}
             </h3>
             <div class="flex items-center space-x-4 text-xs text-gray-500 mt-1">
-              <span>{{ convertBytesToFileSize(item.size) }}</span>
+              <span>{{ formatBytes(item.size) }}</span>
               <span>{{ new Date(item.updatedAt).toLocaleDateString() }}</span>
             </div>
           </div>
@@ -357,7 +357,7 @@ const getSortLabel = (value: string) => {
               {{ item.name }}
             </h3>
             <div class="flex justify-between items-center text-xs text-gray-500">
-              <span>{{ convertBytesToFileSize(item.size) }}</span>
+              <span>{{ formatBytes(item.size) }}</span>
               <span>{{ new Date(item.updatedAt).toLocaleDateString() }}</span>
             </div>
           </div>

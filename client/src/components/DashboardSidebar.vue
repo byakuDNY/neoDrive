@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { MAIN_NAVIGATION, SECONDARY_NAVIGATION } from '@/lib/constants'
-import { convertBytesToFileSize } from '@/lib/utils'
+import { formatBytes } from '@/lib/utils'
 import { useBucketStore } from '@/stores/bucketStore'
 import { AlertTriangle, HardDrive, Loader2, MenuIcon, XIcon } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
@@ -195,11 +195,9 @@ const isStorageCritical = computed(() => {
             <div class="text-xs text-foreground/70">
               <div class="flex justify-between items-center">
                 <span>{{
-                  convertBytesToFileSize(bucketStore.subscriptionUsage.usedStorage) || '0.0 MB'
+                  formatBytes(bucketStore.subscriptionUsage.usedStorage) || '0.0 MB'
                 }}</span>
-                <span>{{
-                  convertBytesToFileSize(bucketStore.subscriptionUsage.storageLimit)
-                }}</span>
+                <span>{{ formatBytes(bucketStore.subscriptionUsage.storageLimit) }}</span>
               </div>
               <p
                 class="text-center"

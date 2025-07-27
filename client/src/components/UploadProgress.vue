@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
 import type { UploadItem } from '@/lib/types'
-import { convertBytesToFileSize } from '@/lib/utils'
+import { formatBytes } from '@/lib/utils'
 import { CheckCircle, File, Loader2, X, XCircle } from 'lucide-vue-next'
 import { computed } from 'vue'
 
@@ -105,7 +105,7 @@ const handleDismiss = () => {
           <div class="flex items-center justify-between">
             <span class="text-sm font-medium truncate">{{ upload.name }}</span>
             <span class="text-xs text-gray-500 ml-2">
-              {{ convertBytesToFileSize(upload.size) }}
+              {{ formatBytes(upload.size) }}
             </span>
           </div>
 

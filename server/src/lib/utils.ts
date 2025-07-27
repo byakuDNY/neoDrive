@@ -1,5 +1,8 @@
 import crypto from "crypto";
+import { FastifyReply, FastifyRequest } from "fastify";
 import { File } from "../models/fileModel";
+import { User } from "../models/userModel";
+import { getSession } from "./session";
 
 export const hashPassword = (password: string, salt: string) => {
   try {
@@ -34,4 +37,29 @@ export const calculateUsedStorage = async (userId: string) => {
     0
   );
   return totalUsedStorage;
+};
+
+export const validateSession = async (
+  request: FastifyRequest,
+  reply: FastifyReply,
+  userId: string
+) => {
+  const session = getSession(request);
+  if (!session) {
+    reply.status(401).send({ message: "Invalid session" });
+    return;
+  }
+
+  if (session.id !== userId) {
+    reply.status(403).send({ message: "Unauthorized" });
+    return;
+  }
+
+  const user = await User.findOne({ id: session.id });
+  if (!user) {
+    reply.status(404).send({ message: "User not found" });
+    return;
+  }
+
+  return { session, user };
 };

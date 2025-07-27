@@ -2,7 +2,7 @@
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import type { SelectFile } from '@/lib/types'
-import { convertBytesToFileSize, formatDate } from '@/lib/utils'
+import { formatBytes, formatDate } from '@/lib/utils'
 import { Check, Copy, Download } from 'lucide-vue-next'
 import { ref } from 'vue'
 
@@ -82,7 +82,7 @@ const copyToClipboard = async (text: string, key: string) => {
 
             <div class="space-y-2">
               <label class="text-sm font-medium text-gray-500">Size</label>
-              <p class="text-sm">{{ convertBytesToFileSize(file.size) }}</p>
+              <p class="text-sm">{{ formatBytes(file.size) }}</p>
             </div>
 
             <div class="space-y-2">

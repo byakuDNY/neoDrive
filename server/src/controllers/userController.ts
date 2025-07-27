@@ -1,33 +1,12 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { nameChangeSchema, passwordChangeSchema } from "../lib/schemas";
-import { getSession, sessions } from "../lib/session";
-import { comparePassword, generateSalt, hashPassword } from "../lib/utils";
-import { User } from "../models/userModel";
-
-const validateSession = async (
-  request: FastifyRequest,
-  reply: FastifyReply,
-  userId: string
-) => {
-  const session = getSession(request);
-  if (!session) {
-    reply.status(401).send({ message: "Invalid session" });
-    return;
-  }
-
-  if (session.id !== userId) {
-    reply.status(403).send({ message: "Unauthorized" });
-    return;
-  }
-
-  const user = await User.findOne({ id: session.id });
-  if (!user) {
-    reply.status(404).send({ message: "User not found" });
-    return;
-  }
-
-  return { session, user };
-};
+import { sessions } from "../lib/session";
+import {
+  comparePassword,
+  generateSalt,
+  hashPassword,
+  validateSession,
+} from "../lib/utils";
 
 export const handleNameChange = async (
   request: FastifyRequest,
@@ -90,7 +69,6 @@ export const handlePasswordChange = async (
 
     const { user } = validation;
 
-    // Verify current password
     const isCurrentPasswordCorrect = comparePassword(
       data.currentPassword,
       user.password,
