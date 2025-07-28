@@ -89,16 +89,62 @@ const handleUpgrade = async (planName: string) => {
     else if (planName == "Free") {
       result = window.confirm("Are you sure you want to downgrade to Free plan? \nYou will keep your current plan until the end of your current billing cycle.")
     }
+    else {
+      result = true;
+    }
     if (result) {
       if (planName == "Free") {
-        const {data, error} = await useFetch('/api/stripe/cancel', {
+        const { data, error } = await useFetch('/api/stripe/cancel', {
           method: 'POST',
           credentials: 'include',
         }).json()
-        if(error.value) {
+        if (error.value) {
           throw new Error(data.value.message ?? 'Failed to cancel subscription')
         }
         toast.info('Successfully canceled subscription. You will be downgraded to Free plan at the end of your current billing cycle.')
+      }
+      else if (currentPlan.value?.name === "Free") {
+        const checkoutPayload = {
+          product: planName,
+          successUrl: `${window.location.origin}/dashboard/subscription?success=true`,
+          cancelUrl: `${window.location.origin}/dashboard/subscription?canceled=true`,
+          userId: authStore.session?.id,
+        }
+
+        const { data, error } = await useFetch('/api/stripe/checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(checkoutPayload),
+        }).json()
+
+        if (error.value) {
+          throw new Error(data.value.message ?? 'Failed to create checkout session')
+        }
+
+        if (data.value.url) {
+          window.location.href = data.value.url
+        } else {
+          throw new Error('No checkout URL received')
+        }
+      }
+      else if (canDowngrade(planName)) {
+        const { data, error } = await useFetch('/api/stripe/downgrade', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({ plan: planName }),
+        }).json()
+
+        if (error.value) {
+          throw new Error(data.value.message ?? 'Failed to downgrade subscription')
+        }
+        toast.info(`Successfully downgraded to ${planName} plan`)
+        await authStore.checkSession()
       }
       else {
         const checkoutPayload = {
