@@ -30,7 +30,8 @@ export const useAuthStore = defineStore(
 
     const checkSession = async () => {
       try {
-        const { error, data } = await useFetch('/api/auth/me', {
+        const userId = session.value?.id
+        const { error, data } = await useFetch(`/api/auth/me/${userId}`, {
           credentials: 'include',
         }).json()
 

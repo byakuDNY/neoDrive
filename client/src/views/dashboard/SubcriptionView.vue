@@ -22,6 +22,7 @@ import {
 } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
+import { url } from 'zod/v4'
 
 const bucketStore = useBucketStore()
 const authStore = useAuthStore()
@@ -53,12 +54,10 @@ onMounted(async () => {
 
   // Check for payment result in URL
   const urlParams = new URLSearchParams(window.location.search)
-
   if (urlParams.get('success') === 'true') {
     showPaymentResult.value = true
     paymentSuccess.value = true
     paymentMessage.value = 'Payment successful! Your subscription has been updated.'
-
     // Refresh user session to get updated subscription
     await authStore.checkSession()
     toast.success('Payment successful! Your subscription has been updated.')
@@ -80,30 +79,49 @@ onMounted(async () => {
 const handleUpgrade = async (planName: string) => {
   isLoading.value = true
   try {
-    const checkoutPayload = {
-      product: planName,
-      successUrl: `${window.location.origin}/dashboard/subscription?success=true`,
-      cancelUrl: `${window.location.origin}/dashboard/subscription?canceled=true`,
-      userId: authStore.session?.id,
+    let result;
+    if (planName == "Premium" && currentPlan.value?.name === "Pro") {
+      result = window.confirm("Are you sure you want to upgrade from Pro to Premium? \nYou will become Premium inmediately and will be charged the difference between your current plan and the Premium plan at next billing cycle")
     }
-
-    const { data, error } = await useFetch('/api/stripe/checkout', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(checkoutPayload),
-    }).json()
-
-    if (error.value) {
-      throw new Error(data.value.message ?? 'Failed to create checkout session')
+    else if (planName == "Pro" && currentPlan.value?.name === "Premium") {
+      result = window.confirm("Are you sure you want to downgrade from Premium to Pro? \nYou will keep being Premium until the end of your current billing cycle, but you will be charged the Pro plan at next billing cycle")
     }
+    else if (planName == "Free") {
+      result = window.confirm("Are you sure you want to downgrade to Free plan? \nYou will keep your current plan until the end of your current billing cycle.")
+    }
+    if (result) {
+      if (planName == "Free") {
+        const {data, error} = await useFetch('/api/stripe/cancel', {
+          method: 'POST',
+          credentials: 'include',
+        }).json()
+        if(error.value) {
+          throw new Error(data.value.message ?? 'Failed to cancel subscription')
+        }
+        toast.info('Successfully canceled subscription. You will be downgraded to Free plan at the end of your current billing cycle.')
+      }
+      else {
+        const checkoutPayload = {
+          product: planName,
+          successUrl: `${window.location.origin}/dashboard/subscription?success=true`,
+          cancelUrl: `${window.location.origin}/dashboard/subscription?canceled=true`,
+          userId: authStore.session?.id,
+        }
+        const { data, error } = await useFetch('/api/stripe/checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(checkoutPayload),
+        }).json()
 
-    if (data.value.url) {
-      window.location.href = data.value.url
-    } else {
-      throw new Error('No checkout URL received')
+        if (error.value) {
+          throw new Error(data.value.message ?? 'Failed to create checkout session')
+        }
+        toast.info('Successfully started upgrade/downgrade process')
+        await authStore.checkSession()
+      }
     }
   } catch (error) {
     console.error('Upgrade error:', error)
@@ -138,17 +156,12 @@ const canDowngrade = (planName: string) => {
       </div>
 
       <div class="flex items-center gap-2">
-        <Badge
-          variant="outline"
-          class="text-sm px-3 py-1"
-          :class="
-            currentPlan?.name === 'Premium'
-              ? 'border-yellow-500 text-yellow-700'
-              : currentPlan?.name === 'Pro'
-                ? 'border-blue-500 text-blue-700'
-                : 'border-gray-500 text-gray-700'
-          "
-        >
+        <Badge variant="outline" class="text-sm px-3 py-1" :class="currentPlan?.name === 'Premium'
+          ? 'border-yellow-500 text-yellow-700'
+          : currentPlan?.name === 'Pro'
+            ? 'border-blue-500 text-blue-700'
+            : 'border-gray-500 text-gray-700'
+          ">
           <Crown v-if="currentPlan?.name === 'Premium'" class="size-3 mr-1" />
           <Star v-else-if="currentPlan?.name === 'Pro'" class="size-3 mr-1" />
           <Zap v-else class="size-3 mr-1" />
@@ -158,11 +171,8 @@ const canDowngrade = (planName: string) => {
     </div>
 
     <!-- Payment Result Card -->
-    <Card
-      v-if="showPaymentResult"
-      class="bg-green-50"
-      :class="paymentSuccess ? 'border-green-500 ' : 'border-red-500 '"
-    >
+    <Card v-if="showPaymentResult" class="bg-green-50"
+      :class="paymentSuccess ? 'border-green-500 ' : 'border-red-500 '">
       <CardContent>
         <div class="flex items-center justify-between">
           <!-- Success State -->
@@ -215,23 +225,17 @@ const canDowngrade = (planName: string) => {
           </div>
 
           <!-- Progress Bar -->
-          <Progress
-            :model-value="storagePercentage"
-            :class="[
-              isStorageCritical
-                ? '[&>div]:bg-red-500'
-                : isStorageWarning
-                  ? '[&>div]:bg-yellow-500'
-                  : '[&>div]:bg-main',
-            ]"
-          />
+          <Progress :model-value="storagePercentage" :class="[
+            isStorageCritical
+              ? '[&>div]:bg-red-500'
+              : isStorageWarning
+                ? '[&>div]:bg-yellow-500'
+                : '[&>div]:bg-main',
+          ]" />
 
           <div class="flex justify-between items-center">
             <span class="text-sm text-foreground/70">{{ storagePercentage.toFixed(1) }}% used</span>
-            <span
-              v-if="isStorageWarning"
-              class="text-red-500 flex items-center gap-1 text-sm font-medium"
-            >
+            <span v-if="isStorageWarning" class="text-red-500 flex items-center gap-1 text-sm font-medium">
               <AlertCircle class="size-4" />
               {{ isStorageCritical ? 'Storage almost full!' : 'Storage running low' }}
             </span>
@@ -239,20 +243,13 @@ const canDowngrade = (planName: string) => {
         </div>
 
         <!-- Storage Warning Card -->
-        <div
-          v-if="isStorageWarning"
-          class="p-4 rounded-base border-2"
-          :class="
-            isStorageCritical
-              ? 'bg-red-50 border-red-200 text-red-800'
-              : 'bg-yellow-50 border-yellow-200 text-yellow-800'
-          "
-        >
+        <div v-if="isStorageWarning" class="p-4 rounded-base border-2" :class="isStorageCritical
+          ? 'bg-red-50 border-red-200 text-red-800'
+          : 'bg-yellow-50 border-yellow-200 text-yellow-800'
+          ">
           <div class="flex items-start gap-3">
-            <AlertCircle
-              class="size-5 mt-0.5 flex-shrink-0"
-              :class="isStorageCritical ? 'text-red-500' : 'text-yellow-500'"
-            />
+            <AlertCircle class="size-5 mt-0.5 flex-shrink-0"
+              :class="isStorageCritical ? 'text-red-500' : 'text-yellow-500'" />
             <div class="space-y-1">
               <p class="font-medium">
                 {{ isStorageCritical ? 'Storage limit reached!' : 'Storage running low' }}
@@ -276,26 +273,19 @@ const canDowngrade = (planName: string) => {
       <p class="text-foreground/70">Simple storage plans that scale with your needs</p>
 
       <div class="grid md:grid-cols-3 gap-6">
-        <Card
-          v-for="plan in PRICING_PLANS"
-          :key="plan.name"
-          class="border-2 border-border rounded-base shadow-shadow relative transition-all duration-200"
-          :class="[
+        <Card v-for="plan in PRICING_PLANS" :key="plan.name"
+          class="border-2 border-border rounded-base shadow-shadow relative transition-all duration-200" :class="[
             plan.name === currentPlan?.name ? 'ring-2 ring-main bg-main/5' : 'hover:shadow-lg',
             plan.popular ? 'scale-105 border-blue-500' : '',
             plan.name === 'Premium' ? 'border-yellow-500' : '',
-          ]"
-        >
+          ]">
           <!-- Popular Badge -->
           <div v-if="plan.popular" class="absolute -top-3 left-1/2 transform -translate-x-1/2">
             <Badge class="bg-blue-500 text-white">Most Popular</Badge>
           </div>
 
           <!-- Premium Badge -->
-          <div
-            v-if="plan.name === 'Premium'"
-            class="absolute -top-3 left-1/2 transform -translate-x-1/2"
-          >
+          <div v-if="plan.name === 'Premium'" class="absolute -top-3 left-1/2 transform -translate-x-1/2">
             <Badge class="bg-yellow-500 text-white">
               <Crown class="size-3 mr-1" />
               Premium
@@ -336,16 +326,9 @@ const canDowngrade = (planName: string) => {
             </div>
 
             <!-- Action Button -->
-            <Button
-              v-else
-              @click="handleUpgrade(plan.name)"
-              :disabled="isLoading || (!canUpgrade(plan.name) && !canDowngrade(plan.name))"
-              class="w-full"
-              :variant="
-                plan.name === 'Pro' ? 'default' : plan.name === 'Premium' ? 'default' : 'neutral'
-              "
-              :class="plan.name === 'Premium' ? 'bg-yellow-500 hover:bg-yellow-600' : ''"
-            >
+            <Button v-else @click="handleUpgrade(plan.name)"
+              :disabled="isLoading || (!canUpgrade(plan.name) && !canDowngrade(plan.name))" class="w-full" :variant="plan.name === 'Pro' ? 'default' : plan.name === 'Premium' ? 'default' : 'neutral'
+                " :class="plan.name === 'Premium' ? 'bg-yellow-500 hover:bg-yellow-600' : ''">
               <Loader2 v-if="isLoading" class="size-4 mr-2 animate-spin" />
               <template v-if="canUpgrade(plan.name)"> Upgrade to {{ plan.name }} </template>
               <template v-else-if="canDowngrade(plan.name)">

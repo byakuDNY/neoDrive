@@ -188,15 +188,14 @@ export const handleCancelSubscription = async (
   reply: FastifyReply
 ) => {
   try {
-    const userSession = getSession(request);
-    if(!userSession) {
+    const userSession = getSession(request, false);
+    if (!userSession) {
       return reply.status(401).send({ message: "Unauthorized" });
     }
     const user = await User.findOne({ id: userSession.id });
-      if (!user) {
-        reply.status(404).send({ message: "User not found" });
-        return;
-      }
+    if (!user) {
+      return reply.status(404).send({ message: "User not found" });;
+    }
     if (!user.subscriptionId) {
       return reply.status(400).send({ message: "No active subscription found" });
     }

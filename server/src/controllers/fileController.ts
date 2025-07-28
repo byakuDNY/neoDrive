@@ -128,7 +128,7 @@ export const handleStoreFileMetadata = async (
     return reply.status(400).send({ message: "Invalid data" });
   }
 
-  const session = getSession(request);
+  const session = getSession(request, false);
   if (!session) {
     return reply.status(401).send({
       message: "Invalid session",
@@ -176,7 +176,7 @@ export const handleRenameFile = async (
     return reply.status(400).send({ message: "Invalid data" });
   }
 
-  const session = getSession(request);
+  const session = getSession(request, false);
   if (!session) {
     return reply.status(401).send({
       message: "Invalid session",
@@ -252,7 +252,7 @@ export const handleFavoriteFile = async (
     return reply.status(400).send({ message: "Invalid data" });
   }
 
-  const session = getSession(request);
+  const session = getSession(request, false);
   if (!session) {
     return reply.status(401).send({
       message: "Invalid session",
@@ -298,7 +298,7 @@ export const handleDeleteFile = async (
     return reply.status(400).send({ message: "Invalid data" });
   }
 
-  const session = getSession(request);
+  const session = getSession(request, false);
   if (!session) {
     return reply.status(401).send({
       message: "Invalid session",
@@ -363,7 +363,7 @@ export const handleGetStorageUsage = async (
   request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  const session = getSession(request);
+  const session = getSession(request, false);
   if (!session) {
     return reply.status(401).send({
       message: "Invalid session",
