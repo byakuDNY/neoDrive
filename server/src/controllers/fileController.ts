@@ -17,14 +17,14 @@ import {
   renameFileSchema,
 } from "../lib/schemas";
 import { getSession } from "../lib/session";
-import { calculateUsedStorage } from "../lib/utils";
+import { calculateUsedStorage, validateSession } from "../lib/utils";
 import { File } from "../models/fileModel";
 
 export const handleGetFiles = async (
   request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  const session = getSession(request);
+  const session = getSession(request, false);
   if (!session) {
     return reply.status(401).send({
       message: "Invalid session",
@@ -38,7 +38,7 @@ export const handleGetFiles = async (
       let url = null;
 
       if (file.type === "file" && file.s3Key) {
-        url = `http://localhost:9000/${envConfig.S3_BUCKET}/${file.s3Key}`;
+        url = `${envConfig.SERVER_URL}/${envConfig.S3_BUCKET}/${file.s3Key}`;
       }
 
       return {
@@ -49,7 +49,9 @@ export const handleGetFiles = async (
 
     return reply.status(200).send({
       message: "Files retrieved successfully",
-      files: filesWithUrls,
+      data: {
+        files: filesWithUrls,
+      },
     });
   } catch (error) {
     console.error("Error retrieving files:", error);
@@ -67,18 +69,10 @@ export const handlePresignedUrl = async (
     return reply.status(400).send({ message: "Invalid data" });
   }
 
-  const session = getSession(request);
-  if (!session) {
-    return reply.status(401).send({
-      message: "Invalid session",
-    });
-  }
+  const validation = await validateSession(request, reply, data.userId);
+  if (!validation) return;
 
-  if (data.userId !== session.id) {
-    return reply.status(403).send({
-      message: "Unauthorized",
-    });
-  }
+  const { session } = validation;
 
   try {
     const usedStorage = await calculateUsedStorage(session.id);

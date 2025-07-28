@@ -2,8 +2,11 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { ulid } from "ulidx";
 import { ADMIN_CREDENTIALS } from "../lib/constants";
 import { adminLoginSchema, loginSchema, signUpSchema } from "../lib/schemas";
-import { clearSession, createSession } from "../lib/session";
-import { clearAdminSession, createAdminSession } from "../lib/sessionAdmin";
+import {
+  clearSession,
+  createAdminSession,
+  createSession,
+} from "../lib/session";
 import { stripeClient } from "../lib/stripe";
 import {
   comparePassword,
@@ -62,8 +65,8 @@ export const handleLogin = async (
     if (!isPasswordCorrect) {
       return reply.status(401).send({ message: "Invalid password" });
     }
-    createSession(user, reply);
 
+    createSession(user, reply);
     return reply.status(200).send({
       message: "User login successfully",
       data: {
@@ -95,7 +98,7 @@ export const handleSignup = async (
 
     const randomSalt = generateSalt();
     const hashedPassword = hashPassword(data.password, randomSalt);
-    // create stripe customer
+
     const stripeCustomer = await stripeClient.customers.create({
       email: data.email,
       name: data.name,
@@ -125,7 +128,7 @@ export const handleSignup = async (
   }
 };
 export const handleLogout = (request: FastifyRequest, reply: FastifyReply) => {
-  const { message } = clearSession(request, reply);
+  const { message } = clearSession(request, reply, false);
   return reply.status(200).send({ message });
 };
 
@@ -165,6 +168,6 @@ export const handleAdminLogout = (
   request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  const { message } = clearAdminSession(request, reply);
+  const { message } = clearSession(request, reply, true);
   return reply.status(200).send({ message });
 };

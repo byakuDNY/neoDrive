@@ -1,4 +1,3 @@
-import { envConfig } from '@/lib/envConfig'
 import type { FileCategory, SelectFile } from '@/lib/types'
 import { getFileInfo } from '@/lib/utils'
 import { useQuery } from '@tanstack/vue-query'
@@ -19,7 +18,7 @@ const fetchFiles = async (): Promise<Omit<SelectFile, 'icon'>[]> => {
     credentials: 'include',
   })
 
-  const { message, files } = await response.json()
+  const { message, data } = await response.json()
   if (!response.ok) {
     if (response.status === 401) {
       const authStore = useAuthStore()
@@ -27,15 +26,14 @@ const fetchFiles = async (): Promise<Omit<SelectFile, 'icon'>[]> => {
 
       window.location.href = '/login'
 
-      toast.error('Session expired. Please log in again.')
       return []
     }
     throw new Error(message ?? 'Failed to store file metadata')
   }
 
-  console.log('Files:', files)
+  console.log('Files:', data.files)
 
-  return files ?? []
+  return data.files ?? []
   // return MOCK_FILE_DATA
 }
 
@@ -91,7 +89,7 @@ export const useFileStore = defineStore('file', () => {
     }
 
     try {
-      const response = await fetch(`${envConfig.API_URL}/api/file/renameFile`, {
+      const response = await fetch('/api/file/renameFile', {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -128,7 +126,7 @@ export const useFileStore = defineStore('file', () => {
     }
 
     try {
-      const response = await fetch(`${envConfig.API_URL}/api/file/toggleFavorite`, {
+      const response = await fetch('/api/file/toggleFavorite', {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -144,7 +142,7 @@ export const useFileStore = defineStore('file', () => {
           onInvalidSession()
           return
         }
-        toast.error(data.message)
+        // toast.error(data.message ?? `Failed to ${isFavorited ? 'unfavorite' : 'favorite'} file: `)
         throw new Error(
           data.message ?? `Failed to ${isFavorited ? 'unfavorite' : 'favorite'} file: `,
         )
@@ -182,7 +180,7 @@ export const useFileStore = defineStore('file', () => {
     }
 
     try {
-      const response = await fetch(`${envConfig.API_URL}/api/file`, {
+      const response = await fetch(`/api/file`, {
         method: 'DELETE',
         credentials: 'include',
         headers: {
@@ -213,7 +211,7 @@ export const useFileStore = defineStore('file', () => {
 
   const onInvalidSession = () => {
     authStore.clearSession()
-    window.location.href = '/login'
+    // window.location.href = '/login'
   }
 
   return {

@@ -2,7 +2,6 @@ import type { User } from '@/lib/types'
 import { useFetch } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { toast } from 'vue-sonner'
 
 export const useAuthStore = defineStore(
   'auth',
@@ -30,13 +29,20 @@ export const useAuthStore = defineStore(
     }
 
     const checkSession = async () => {
-      const { error, data } = await useFetch(`/api/auth/me/${session.value?.id}`)
-      if (error.value) {
-        toast.error('Failed to check session', data.value.message)
-        throw error.value
+      try {
+        const { error, data } = await useFetch('/api/auth/me', {
+          credentials: 'include',
+        }).json()
+
+        if (error.value) {
+          throw new Error(data.value.message ?? 'Failed to check session')
+        }
+
+        setSession(data.value.data)
+      } catch (error) {
+        console.error('Session check error:', error)
+        clearSession()
       }
-      console.log(data.value)
-      return data.value.data
     }
 
     return {

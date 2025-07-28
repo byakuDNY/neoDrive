@@ -44,21 +44,18 @@ export const validateSession = async (
   reply: FastifyReply,
   userId: string
 ) => {
-  const session = getSession(request);
+  const session = getSession(request, false);
   if (!session) {
-    reply.status(401).send({ message: "Invalid session" });
-    return;
+    return reply.status(401).send({ message: "Invalid session" });
   }
 
   if (session.id !== userId) {
-    reply.status(403).send({ message: "Unauthorized" });
-    return;
+    return reply.status(403).send({ message: "Unauthorized" });
   }
 
   const user = await User.findOne({ id: session.id });
   if (!user) {
-    reply.status(404).send({ message: "User not found" });
-    return;
+    return reply.status(404).send({ message: "User not found" });
   }
 
   return { session, user };

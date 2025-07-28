@@ -97,10 +97,10 @@ const handleUpgrade = async (planName: string) => {
     }).json()
 
     if (error.value) {
-      throw new Error(data.value?.message ?? 'Failed to create checkout session')
+      throw new Error(data.value.message ?? 'Failed to create checkout session')
     }
 
-    if (data.value?.url) {
+    if (data.value.url) {
       window.location.href = data.value.url
     } else {
       throw new Error('No checkout URL received')

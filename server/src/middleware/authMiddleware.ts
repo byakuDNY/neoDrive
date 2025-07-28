@@ -9,18 +9,5 @@ export const sessionUpdateMiddleware = async (
 
   if (session) {
     updateSessionExpiration(request, reply);
-    console.log(`[Session] Updated expiration for user ${session.id}`);
   }
 };
-
-// Type declaration for request.user (optional)
-// declare module 'fastify' {
-//   interface FastifyRequest {
-//     user?: {
-//       id: string;
-//       name: string;
-//       email: string;
-//       subscription: string;
-//     };
-//   }
-// }

@@ -1,29 +1,28 @@
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import Fastify from "fastify";
-// import Database from "./src/config/database";
 import { CLEANUP_INTERVAL } from "./src/lib/constants";
+import { envConfig } from "./src/lib/envConfig";
 import { connectToMongoDB } from "./src/lib/mongoConnection";
 import { validateS3BucketAccess } from "./src/lib/s3Client";
 import { cleanupExpiredSessions } from "./src/lib/session.js";
 import { authRoutes } from "./src/routes/authRoute";
 import { fileRoutes } from "./src/routes/fileRoute";
+import { paymentHistoryRoutes } from "./src/routes/paymentHistoriesRoute";
 import { stripeRoutes } from "./src/routes/stripeRoutes";
 import { userRoutes } from "./src/routes/userRoutes";
 import { webhookRoutes } from "./src/routes/webhookRoutes";
-import { paymentHistoryRoutes } from "./src/routes/paymentHistoriesRoute";
 
 const fastify = Fastify();
 
 const startServer = async () => {
   try {
-    // await Database.connect();
     await connectToMongoDB();
 
     fastify.register(cors, {
-      origin: ["http://localhost:5173", "https://neodrive-kappa.vercel.app"],
-      credentials: true, // Important for cookies
-      methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], // Explicitly list methods
+      origin: ["http://localhost:5173"],
+      credentials: true,
+      methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     });
 
     fastify.register(cookie);
@@ -49,9 +48,9 @@ const startServer = async () => {
       prefix: "/api/webhook",
     });
 
-    fastify.register(paymentHistoryRoutes,{
+    fastify.register(paymentHistoryRoutes, {
       prefix: "/api/paymentHistories",
-    })
+    });
 
     const s3Connected = await validateS3BucketAccess();
     if (!s3Connected) {
@@ -59,12 +58,12 @@ const startServer = async () => {
     }
 
     await fastify.listen({
-      port: 3000,
+      port: envConfig.SERVER_PORT,
     });
 
     setInterval(cleanupExpiredSessions, CLEANUP_INTERVAL);
 
-    console.log("🚀 Servidor Fastify corriendo en http://localhost:3000");
+    console.log(`🚀 Servidor Fastify corriendo en ${envConfig.SERVER_URL}`);
     console.log("📊 Endpoints disponibles:");
     console.log("   - GET  /");
     console.log("   - CRUD /api/user");
@@ -72,8 +71,8 @@ const startServer = async () => {
     console.log("   - AUTH /api/auth");
     console.log("   - STRIPE /api/stripe");
     console.log("   - GET /api/paymentHistories");
-  } catch (err) {
-    fastify.log.error(err);
+  } catch (error) {
+    fastify.log.error(error);
     process.exit(1);
   }
 };
