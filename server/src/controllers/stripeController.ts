@@ -7,6 +7,8 @@ import { stripeClient } from "../lib/stripe";
 import { validateSession } from "../lib/utils";
 import { Subscription } from "../models/subscriptionsModel";
 import { UserPaymentHistory } from "../models/userPaymentHistoryModel";
+import { getSession, updateSession } from "../lib/session";
+import { SubscriptionPlan, User } from "../models/userModel";
 
 export const handleCreateProduct = async (
   request: FastifyRequest,
@@ -106,7 +108,7 @@ export const handleCreateCheckoutSession = async (
           amount: subscription.price,
           paymentDate: paymentDate,
         });
-
+        updateSession(user.id, { subscription: subscription.name as SubscriptionPlan });
         return reply.status(200).send({
           message: "Subscription updated successfully",
           subscription: updatedSubscription,
@@ -180,3 +182,37 @@ export const handleCreateCheckoutSession = async (
     return reply.status(500).send({ message: "Internal server error" });
   }
 };
+
+export const handleCancelSubscription = async (
+  request: FastifyRequest,
+  reply: FastifyReply
+) => {
+  try {
+    const userSession = getSession(request);
+    if(!userSession) {
+      return reply.status(401).send({ message: "Unauthorized" });
+    }
+    const user = await User.findOne({ id: userSession.id });
+      if (!user) {
+        reply.status(404).send({ message: "User not found" });
+        return;
+      }
+    if (!user.subscriptionId) {
+      return reply.status(400).send({ message: "No active subscription found" });
+    }
+    const subscription = await stripeClient.subscriptions.retrieve(
+      user.subscriptionId
+    );
+    if (!subscription) {
+      return reply.status(404).send({ message: "Subscription not found" });
+    }
+    await stripeClient.subscriptions.update(user.subscriptionId, {
+      cancel_at_period_end: true,
+    });
+    console.log("Subscription cancellation scheduled successfully");
+    return reply.status(200).send({ message: "Subscription cancellation scheduled successfully" });
+  } catch (error) {
+    console.error("Error processing cancelled subscription:", error);
+    return reply.status(500).send({ message: "Internal server error" });
+  }
+}

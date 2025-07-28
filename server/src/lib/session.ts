@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { ulid } from "ulidx";
-import { IUser } from "../models/userModel";
+import { IUser, SubscriptionPlan } from "../models/userModel";
 import { COOKIE_SESSION_KEY, SESSION_EXPIRATION } from "./constants";
 
 export const sessions = new Map<
@@ -41,6 +41,26 @@ export const createSession = (user: IUser, reply: FastifyReply) => {
 
   setCookie(reply, sessionId);
 };
+
+export const updateSession = (
+  userId: string,
+  updates: {
+    subscription?: SubscriptionPlan;
+  }
+) => {
+  for (const [sessionId, session] of sessions) {
+    if (session.id === userId) {
+      const updatedSession = {
+        ...session,
+        ...updates,
+        expiresAt: Date.now() + SESSION_EXPIRATION * 1000,
+      };
+      sessions.set(sessionId, updatedSession);
+    }
+  }
+  // console.log(`Updated sessions for user ${userId}`);
+  // console.log('All current sessions:', Array.from(sessions.entries()));
+}
 
 export const clearSession = (request: FastifyRequest, reply: FastifyReply) => {
   const sessionId = request.cookies[COOKIE_SESSION_KEY];

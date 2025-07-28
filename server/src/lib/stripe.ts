@@ -3,6 +3,7 @@ import { Subscription } from "../models/subscriptionsModel";
 import { SubscriptionPlan, User } from "../models/userModel";
 import { UserPaymentHistory } from "../models/userPaymentHistoryModel";
 import { envConfig } from "./envConfig";
+import { updateSession } from "./session";
 
 export const stripeClient = new Stripe(envConfig.STRIPE_SECRET_KEY);
 
@@ -44,6 +45,7 @@ export const handleCompletedCheckout = async (
     user.SubscriptionEndDate = subscriptionEndDate;
     user.subscriptionId = session.subscription as string;
     await user.save();
+    updateSession(user.id, {subscription: subscription as SubscriptionPlan});
   } catch (error) {
     console.error("Error processing completed checkout:", error);
   }
