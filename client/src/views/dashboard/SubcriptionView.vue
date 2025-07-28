@@ -7,6 +7,7 @@ import { PRICING_PLANS } from '@/lib/constants'
 import { formatBytes } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 import { useBucketStore } from '@/stores/bucketStore'
+import { useFetch } from '@vueuse/core'
 import {
   AlertCircle,
   CheckCircle,
@@ -25,27 +26,18 @@ import { toast } from 'vue-sonner'
 const bucketStore = useBucketStore()
 const authStore = useAuthStore()
 
-const showPaymentResult = ref(true)
+const showPaymentResult = ref(false)
 const paymentSuccess = ref(false)
 const paymentMessage = ref('')
-const isUpgrading = ref(false)
+const isLoading = ref(false)
 
 const currentPlan = computed(() => {
   const subscription = authStore.session?.subscription || 'Free'
   return PRICING_PLANS.find((plan) => plan.name === subscription)
 })
 
-// Storage calculations
-const storageUsed = computed(() => {
-  return bucketStore.subscriptionUsage?.usedStorage || 0
-})
-
-const storageTotal = computed(() => {
-  return bucketStore.subscriptionUsage?.storageLimit || 0
-})
-
 const storagePercentage = computed(() => {
-  return Number(bucketStore.storageUsagePercentage) || 0
+  return Number(bucketStore.storageUsagePercentage)
 })
 
 const isStorageWarning = computed(() => {
@@ -86,38 +78,30 @@ onMounted(async () => {
 })
 
 const handleUpgrade = async (planName: string) => {
+  isLoading.value = true
   try {
-    isUpgrading.value = true
+    const checkoutPayload = {
+      product: planName,
+      successUrl: `${window.location.origin}/dashboard/subscription?success=true`,
+      cancelUrl: `${window.location.origin}/dashboard/subscription?canceled=true`,
+      userId: authStore.session?.id,
+    }
 
-    const response = await fetch(`/api/stripe/checkout`, {
+    const { data, error } = await useFetch('/api/stripe/checkout', {
       method: 'POST',
-      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        product: planName,
-        successUrl: `${window.location.origin}/dashboard/subscription?success=true`,
-        cancelUrl: `${window.location.origin}/dashboard/subscription?canceled=true`,
-        userId: authStore.session?.id,
-      }),
-    })
+      credentials: 'include',
+      body: JSON.stringify(checkoutPayload),
+    }).json()
 
-    const data = await response.json()
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        authStore.clearSession()
-        window.location.href = '/login'
-        toast.error('Session expired. Please log in again.')
-        return
-      }
-      throw new Error(data.message || 'Failed to create checkout session')
+    if (error.value) {
+      throw new Error(data.value?.message ?? 'Failed to create checkout session')
     }
 
-    // Redirect to Stripe Checkout
-    if (data.url) {
-      window.location.href = data.url
+    if (data.value?.url) {
+      window.location.href = data.value.url
     } else {
       throw new Error('No checkout URL received')
     }
@@ -125,7 +109,7 @@ const handleUpgrade = async (planName: string) => {
     console.error('Upgrade error:', error)
     toast.error(error instanceof Error ? error.message : 'Failed to start upgrade process')
   } finally {
-    isUpgrading.value = false
+    isLoading.value = false
   }
 }
 
@@ -222,10 +206,11 @@ const canDowngrade = (planName: string) => {
       <CardContent class="space-y-6">
         <!-- Storage Usage -->
         <div class="space-y-4">
-          <div class="flex justify-between items-center">
+          <div class="flex justify-between items-center" v-if="bucketStore.subscriptionUsage">
             <span class="text-lg font-medium">{{ currentPlan?.name }} Plan</span>
             <span class="text-lg font-mono">
-              {{ formatBytes(storageUsed) }} / {{ formatBytes(storageTotal) }}
+              {{ formatBytes(bucketStore.subscriptionUsage.usedStorage) }} /
+              {{ formatBytes(bucketStore.subscriptionUsage.storageLimit) }}
             </span>
           </div>
 
@@ -354,14 +339,14 @@ const canDowngrade = (planName: string) => {
             <Button
               v-else
               @click="handleUpgrade(plan.name)"
-              :disabled="isUpgrading || (!canUpgrade(plan.name) && !canDowngrade(plan.name))"
+              :disabled="isLoading || (!canUpgrade(plan.name) && !canDowngrade(plan.name))"
               class="w-full"
               :variant="
                 plan.name === 'Pro' ? 'default' : plan.name === 'Premium' ? 'default' : 'neutral'
               "
               :class="plan.name === 'Premium' ? 'bg-yellow-500 hover:bg-yellow-600' : ''"
             >
-              <Loader2 v-if="isUpgrading" class="size-4 mr-2 animate-spin" />
+              <Loader2 v-if="isLoading" class="size-4 mr-2 animate-spin" />
               <template v-if="canUpgrade(plan.name)"> Upgrade to {{ plan.name }} </template>
               <template v-else-if="canDowngrade(plan.name)">
                 Downgrade to {{ plan.name }}
