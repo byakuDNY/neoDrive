@@ -36,11 +36,6 @@ export const handleCompletedCheckout = async (
     }
     const subscriptionEndDate = new Date();
     subscriptionEndDate.setDate(subscriptionEndDate.getDate() + 30);
-    await UserPaymentHistory.create({
-      userId: user.id,
-      subscriptionId: subscriptionPlan._id.toString(),
-      amount: subscriptionPlan.price,
-    });
     user.subscription = subscription as SubscriptionPlan;
     user.SubscriptionEndDate = subscriptionEndDate;
     user.subscriptionId = session.subscription as string;
