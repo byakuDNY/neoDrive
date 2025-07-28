@@ -110,7 +110,6 @@ const handleUpgrade = async (planName: string) => {
           cancelUrl: `${window.location.origin}/dashboard/subscription?canceled=true`,
           userId: authStore.session?.id,
         }
-
         const { data, error } = await useFetch('/api/stripe/checkout', {
           method: 'POST',
           headers: {
@@ -129,22 +128,6 @@ const handleUpgrade = async (planName: string) => {
         } else {
           throw new Error('No checkout URL received')
         }
-      }
-      else if (canDowngrade(planName)) {
-        const { data, error } = await useFetch('/api/stripe/downgrade', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({ plan: planName }),
-        }).json()
-
-        if (error.value) {
-          throw new Error(data.value.message ?? 'Failed to downgrade subscription')
-        }
-        toast.info(`Successfully downgraded to ${planName} plan`)
-        await authStore.checkSession()
       }
       else {
         const checkoutPayload = {
@@ -167,6 +150,7 @@ const handleUpgrade = async (planName: string) => {
         }
         toast.info('Successfully started upgrade/downgrade process')
         await authStore.checkSession()
+        await bucketStore.loadSubscriptionUsage()
       }
     }
   } catch (error) {
