@@ -66,7 +66,7 @@ export const handleInvoicePaymentSucceeded = async (
         stripeId: downgradeTo,
       });
       if (!downgradedSubscription) {
-        throw new Error(`Downgrade subscription not found: ${downgradeTo}`);
+        throw new Error(`Subscription to downgrade to not found: ${downgradeTo}`);
       }
       user.subscription = downgradedSubscription.name as SubscriptionPlan;
       await stripeClient.subscriptions.update(user.subscriptionId as string, {
