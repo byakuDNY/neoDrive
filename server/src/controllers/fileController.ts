@@ -38,7 +38,7 @@ export const handleGetFiles = async (
       let url = null;
 
       if (file.type === "file" && file.s3Key) {
-        url = `${envConfig.SERVER_URL}/${envConfig.S3_BUCKET}/${file.s3Key}`;
+        url = `${envConfig.S3_ENDPOINT}/${envConfig.S3_BUCKET}/${file.s3Key}`;
       }
 
       return {
