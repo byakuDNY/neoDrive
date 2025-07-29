@@ -16,9 +16,9 @@ import Fuse from 'fuse.js'
 import { LogOut, Search, X } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import ModeToggle from './ModeToggle.vue'
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
-import { Input } from './ui/input'
+import ModeToggle from '../ModeToggle.vue'
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
+import { Input } from '../ui/input'
 
 const router = useRouter()
 

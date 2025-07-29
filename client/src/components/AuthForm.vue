@@ -13,14 +13,16 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card'
 
-const router = useRouter()
-
-const submitError = ref('')
-const loading = ref(false)
-
 const { type } = defineProps<{
   type: 'SIGNUP' | 'LOGIN'
 }>()
+
+const router = useRouter()
+
+const authStore = useAuthStore()
+
+const submitError = ref('')
+const loading = ref(false)
 
 const isSignup = computed(() => {
   return type === 'SIGNUP' ? true : false
@@ -51,6 +53,8 @@ const form = useForm({
 
 const onSubmit = form.handleSubmit(async (values) => {
   loading.value = true
+  submitError.value = ''
+
   const authType = isSignup.value ? 'signup' : 'login'
   try {
     const response = await fetch(`/api/auth/${authType}`, {
@@ -64,14 +68,12 @@ const onSubmit = form.handleSubmit(async (values) => {
 
     const { message, data: userData } = await response.json()
     if (!response.ok) {
-      submitError.value = message ?? 'An unexpected error occurred while processing your request'
-      console.error(response)
+      submitError.value = message ?? 'Authentication failed'
       return
     }
 
     if (!isSignup.value) {
-      const { setSession } = useAuthStore()
-      setSession(userData)
+      authStore.setSession(userData)
       router.push('/dashboard')
     } else {
       router.push('/login')

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import DashboardHeader from '@/components/DashboardHeader.vue'
-import DashboardSidebar from '@/components/DashboardSidebar.vue'
+import DashboardHeader from '@/components/dashboard/DashboardHeader.vue'
+import DashboardSidebar from '@/components/dashboard/DashboardSidebar.vue'
 </script>
 
 <template>

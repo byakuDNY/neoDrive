@@ -69,14 +69,14 @@ const fetchPaymentHistories = async () => {
       credentials: 'include',
     })
 
-    const data = await response.json()
+    const { message, data } = await response.json()
 
     if (!response.ok) {
-      error.value = data.message || 'Failed to fetch payment histories'
+      error.value = message || 'Failed to fetch payment histories'
       return
     }
 
-    paymentHistories.value = data.data
+    paymentHistories.value = data.paymentHistories
   } catch (err) {
     error.value = 'Network error occurred'
     console.error('Error fetching payment histories:', err)

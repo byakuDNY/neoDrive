@@ -46,8 +46,7 @@ const onSubmit = form.handleSubmit(async (values) => {
 
     const { message, data: adminData } = await response.json()
     if (!response.ok) {
-      submitError.value = message ?? 'An unexpected error occurred while processing your request'
-      console.error(response)
+      submitError.value = message ?? 'Authentication failed'
       return
     }
 

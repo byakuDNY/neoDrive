@@ -41,13 +41,11 @@ export const handleNameChange = async (
 
     return reply.status(200).send({
       message: "Name changed successfully",
-      data: {
-        name: newName,
-      },
+      data: newName,
     });
   } catch (error) {
     console.error("Error changing name:", error);
-    return reply.status(500).send({ message: "Internal server error" });
+    return reply.status(500).send({ message: "Failed to change name" });
   }
 };
 
@@ -103,6 +101,6 @@ export const handlePasswordChange = async (
     });
   } catch (error) {
     console.error("Error changing password:", error);
-    return reply.status(500).send({ message: "Internal server error" });
+    return reply.status(500).send({ message: "Failed to change password" });
   }
 };

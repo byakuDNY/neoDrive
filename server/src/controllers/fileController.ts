@@ -48,15 +48,15 @@ export const handleGetFiles = async (
     });
 
     return reply.status(200).send({
-      message: "Files retrieved successfully",
+      message: "Files fetched successfully",
       data: {
         files: filesWithUrls,
       },
     });
   } catch (error) {
-    console.error("Error retrieving files:", error);
+    console.error("Error fetching files:", error);
     return reply.status(500).send({
-      message: "Failed to retrieve files",
+      message: "Failed to fetch files",
     });
   }
 };
@@ -76,6 +76,7 @@ export const handlePresignedUrl = async (
 
   try {
     const usedStorage = await calculateUsedStorage(session.id);
+
     const storageLimit =
       SUBSCRIPTION_LIMITS[
         session.subscription as keyof typeof SUBSCRIPTION_LIMITS
@@ -109,8 +110,11 @@ export const handlePresignedUrl = async (
     });
 
     return reply.status(200).send({
-      presignedUrl,
-      uniqueKey,
+      message: "Presigned URL generated successfully",
+      data: {
+        presignedUrl,
+        uniqueKey,
+      },
     });
   } catch (error) {
     console.error("Error generating presigned URL:", error);
@@ -128,20 +132,10 @@ export const handleStoreFileMetadata = async (
     return reply.status(400).send({ message: "Invalid data" });
   }
 
-  const session = getSession(request, false);
-  if (!session) {
-    return reply.status(401).send({
-      message: "Invalid session",
-    });
-  }
-
-  if (data.userId !== session.id) {
-    return reply.status(403).send({
-      message: "Unauthorized",
-    });
-  }
-
   try {
+    const validation = await validateSession(request, reply, data.userId);
+    if (!validation) return;
+
     const existingFile = await File.findOne({
       name: data.name,
       userId: data.userId,
@@ -176,35 +170,19 @@ export const handleRenameFile = async (
     return reply.status(400).send({ message: "Invalid data" });
   }
 
-  const session = getSession(request, false);
-  if (!session) {
-    return reply.status(401).send({
-      message: "Invalid session",
-    });
-  }
-
-  if (data.userId !== session.id) {
-    return reply.status(403).send({
-      message: "Unauthorized",
-    });
-  }
-
   try {
+    const validation = await validateSession(request, reply, data.userId);
+    if (!validation) return;
+    const { session } = validation;
+
     const file = await File.findOne({ id: data.id, userId: data.userId });
     if (!file) {
       return reply.status(404).send({ message: "File not found" });
     }
 
-    // Update database record
-    const updateDatabasePromise = File.updateOne(
-      { id: data.id, userId: data.userId },
-      { name: data.name }
-    );
+    const updateData = { name: data.name, s3Key: "" };
 
-    // Update S3 object if it exists (copy to new name, then delete old)
-    let updateS3Promise: Promise<any> = Promise.resolve();
     if (file.s3Key && file.type === "file") {
-      // Generate new S3 key with new filename
       const newKey = `${session.id}_${ulid()}${file.path}${data.name}`;
 
       const copyCommand = new CopyObjectCommand({
@@ -218,19 +196,13 @@ export const handleRenameFile = async (
         Key: file.s3Key,
       });
 
-      updateS3Promise = s3Client.send(copyCommand).then(() => {
-        // Update the database with the new S3 key
-        return Promise.all([
-          s3Client.send(deleteCommand),
-          File.updateOne(
-            { id: data.id, userId: data.userId },
-            { s3Key: newKey }
-          ),
-        ]);
-      });
+      await s3Client.send(copyCommand);
+      await s3Client.send(deleteCommand);
+
+      updateData.s3Key = newKey;
     }
 
-    await Promise.all([updateDatabasePromise, updateS3Promise]);
+    await File.updateOne({ id: data.id, userId: data.userId }, updateData);
 
     return reply.status(200).send({
       message: "File renamed successfully",
@@ -252,39 +224,30 @@ export const handleFavoriteFile = async (
     return reply.status(400).send({ message: "Invalid data" });
   }
 
-  const session = getSession(request, false);
-  if (!session) {
-    return reply.status(401).send({
-      message: "Invalid session",
-    });
-  }
-
-  if (data.userId !== session.id) {
-    return reply.status(403).send({
-      message: "Unauthorized",
-    });
-  }
-
   try {
-    await File.findOneAndUpdate(
+    const validation = await validateSession(request, reply, data.userId);
+    if (!validation) return;
+
+    const file = await File.findOneAndUpdate(
       { id: data.id, userId: data.userId },
       { isFavorited: !data.isFavorited }
     );
+    if (!file) {
+      return reply.status(404).send({ message: "File not found" });
+    }
 
     return reply.status(200).send({
       message: `File to ${
-        data.isFavorited === true ? "unfavorited" : "favorited"
+        data.isFavorited ? "unfavorited" : "favorited"
       } successfully`,
     });
   } catch (error) {
     console.error(
-      `Error to ${data.isFavorited === true ? "unfavorite" : "favorite"} file:`,
+      `Error to ${data.isFavorited ? "unfavorite" : "favorite"} file:`,
       error
     );
     return reply.status(500).send({
-      message: `Failed to ${
-        data.isFavorited === true ? "unfavorite" : "favorite"
-      } file`,
+      message: `Failed to ${data.isFavorited ? "unfavorite" : "favorite"} file`,
     });
   }
 };
@@ -298,20 +261,10 @@ export const handleDeleteFile = async (
     return reply.status(400).send({ message: "Invalid data" });
   }
 
-  const session = getSession(request, false);
-  if (!session) {
-    return reply.status(401).send({
-      message: "Invalid session",
-    });
-  }
-
-  if (data.userId !== session.id) {
-    return reply.status(403).send({
-      message: "Unauthorized",
-    });
-  }
-
   try {
+    const validation = await validateSession(request, reply, data.userId);
+    if (!validation) return;
+
     const fileToDelete = await File.findOne({
       id: data.id,
       userId: data.userId,
@@ -321,7 +274,7 @@ export const handleDeleteFile = async (
     }
 
     // If it's a folder, check if it contains any files
-    if (fileToDelete.type === "folder") {
+    if (!data.s3Key && fileToDelete.type === "folder") {
       const filesInFolder = await File.find({
         userId: data.userId,
         path: `${fileToDelete.path}${fileToDelete.name}/`,
@@ -335,11 +288,6 @@ export const handleDeleteFile = async (
       }
     }
 
-    await File.findOneAndDelete({
-      id: data.id,
-      userId: data.userId,
-    });
-
     if (data.s3Key && data.type === "file") {
       const command = new DeleteObjectCommand({
         Bucket: envConfig.S3_BUCKET,
@@ -347,6 +295,11 @@ export const handleDeleteFile = async (
       });
       await s3Client.send(command);
     }
+
+    await File.findOneAndDelete({
+      id: data.id,
+      userId: data.userId,
+    });
 
     return reply.status(200).send({
       message: "File deleted successfully",

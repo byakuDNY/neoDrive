@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AuthForm from '@/components/AuthForm.vue'
-import PublicHeader from '@/components/PublicHeader.vue'
+import PublicHeader from '@/components/public/PublicHeader.vue'
 </script>
 
 <template>

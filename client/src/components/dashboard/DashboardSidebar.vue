@@ -5,9 +5,9 @@ import { useBucketStore } from '@/stores/bucketStore'
 import { AlertTriangle, HardDrive, Loader2, MenuIcon, XIcon } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import AppLogo from './AppLogo.vue'
-import { Button } from './ui/button'
-import { Progress } from './ui/progress'
+import AppLogo from '../AppLogo.vue'
+import { Button } from '../ui/button'
+import { Progress } from '../ui/progress'
 
 const SIDEBAR_COLLAPSED_KEY = 'is-sidebar-collapsed'
 

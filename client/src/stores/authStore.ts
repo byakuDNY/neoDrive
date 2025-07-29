@@ -31,15 +31,21 @@ export const useAuthStore = defineStore(
     const checkSession = async () => {
       try {
         const userId = session.value?.id
-        const { error, data } = await useFetch(`/api/auth/me/${userId}`, {
+        const { error, data: updatedName } = await useFetch(`/api/auth/me/${userId}`, {
           credentials: 'include',
         }).json()
 
         if (error.value) {
-          throw new Error(data.value.message ?? 'Failed to check session')
+          clearSession()
+          return
         }
 
-        setSession(data.value.data)
+        if (session.value) {
+          setSession({
+            ...session.value,
+            name: updatedName.value,
+          })
+        }
       } catch (error) {
         console.error('Session check error:', error)
         clearSession()

@@ -5,12 +5,8 @@ import { User } from "../models/userModel";
 import { getSession } from "./session";
 
 export const hashPassword = (password: string, salt: string) => {
-  try {
-    const hash = crypto.scryptSync(password.normalize(), salt, 64);
-    return hash.toString("hex");
-  } catch (error) {
-    throw error;
-  }
+  const hash = crypto.scryptSync(password.normalize(), salt, 64);
+  return hash.toString("hex");
 };
 
 export const generateSalt = () => {
@@ -32,10 +28,7 @@ export const comparePassword = (
 
 export const calculateUsedStorage = async (userId: string) => {
   const userFiles = await File.find({ userId });
-  const totalUsedStorage = userFiles.reduce(
-    (sum, file) => sum + (file.size ?? 0),
-    0
-  );
+  const totalUsedStorage = userFiles.reduce((sum, file) => sum + file.size, 0);
   return totalUsedStorage;
 };
 

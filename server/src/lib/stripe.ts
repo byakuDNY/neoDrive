@@ -40,7 +40,7 @@ export const handleCompletedCheckout = async (
     user.SubscriptionEndDate = subscriptionEndDate;
     user.subscriptionId = session.subscription as string;
     await user.save();
-    updateSession(user.id, {subscription: subscription as SubscriptionPlan});
+    updateSession(user.id, { subscription: subscription as SubscriptionPlan });
   } catch (error) {
     console.error("Error processing completed checkout:", error);
   }

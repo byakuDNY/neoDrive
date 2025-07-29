@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import FilePreviewDialog from '@/components/FilePreviewDialog.vue'
-import RenameFileDialog from '@/components/RenameFileDialog.vue'
+import FilePreviewDialog from '@/components/file/FilePreviewDialog.vue'
+import RenameFileDialog from '@/components/file/RenameFileDialog.vue'
+import ViewDetailsDialog from '@/components/file/ViewDetailsDialog.vue'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -15,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import ViewDetailsDialog from '@/components/ViewDetailsDialog.vue'
 import type { FileCategory, SelectFile } from '@/lib/types'
 import { formatBytes } from '@/lib/utils'
 import { useFileStore } from '@/stores/fileStore'

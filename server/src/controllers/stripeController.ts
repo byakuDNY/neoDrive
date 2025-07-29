@@ -3,12 +3,12 @@ import {
   createCheckoutSessionSchema,
   createProductSchema,
 } from "../lib/schemas";
+import { getSession, updateSession } from "../lib/session";
 import { stripeClient } from "../lib/stripe";
 import { validateSession } from "../lib/utils";
 import { Subscription } from "../models/subscriptionsModel";
-import { UserPaymentHistory } from "../models/userPaymentHistoryModel";
-import { getSession, updateSession } from "../lib/session";
 import { SubscriptionPlan, User } from "../models/userModel";
+import { UserPaymentHistory } from "../models/userPaymentHistoryModel";
 
 export const handleCreateProduct = async (
   request: FastifyRequest,
@@ -18,6 +18,7 @@ export const handleCreateProduct = async (
   if (!success) {
     return reply.status(400).send({ message: "Invalid product creation data" });
   }
+
   try {
     const product = await stripeClient.products.create({
       name: data.name,
@@ -29,11 +30,13 @@ export const handleCreateProduct = async (
         },
       },
     });
+
     const subscription = await Subscription.create({
       name: data.name,
       price: data.price,
       stripeId: product.default_price,
     });
+
     return reply.status(201).send({
       message: "Product created successfully",
       product: {
@@ -45,7 +48,7 @@ export const handleCreateProduct = async (
     });
   } catch (error) {
     console.error("Error creating product:", error);
-    return reply.status(500).send({ message: "Internal server error" });
+    return reply.status(500).send({ message: "Failed to create product" });
   }
 };
 
@@ -57,6 +60,7 @@ export const handleCreateCheckoutSession = async (
   if (!success) {
     return reply.status(400).send({ message: "Invalid checkout session data" });
   }
+  
   try {
     const validation = await validateSession(request, reply, data.userId);
     if (!validation) return;

@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import PublicFooter from '@/components/PublicFooter.vue'
-import PublicHeader from '@/components/PublicHeader.vue'
+import PublicFooter from '@/components/public/PublicFooter.vue'
+import PublicHeader from '@/components/public/PublicHeader.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { FEATURES, PRICING_PLANS } from '@/lib/constants'
 import { useAuthStore } from '@/stores/authStore'
 import { Check } from 'lucide-vue-next'
+import { storeToRefs } from 'pinia'
 import { RouterLink } from 'vue-router'
 
-const { isAuthenticated } = useAuthStore()
+const authStore = useAuthStore()
+const { isAuthenticated } = storeToRefs(authStore)
 </script>
 
 <template>

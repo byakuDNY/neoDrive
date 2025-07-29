@@ -12,8 +12,8 @@ export const useProfile = () => {
 
   const changeName = async (newName: string) => {
     if (!authStore.session) {
-      nameError.value = 'User session not found'
-      return false
+      nameError.value = 'Invalid session'
+      return
     }
 
     nameError.value = null
@@ -24,26 +24,21 @@ export const useProfile = () => {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ name: newName, userId: authStore.session.id }),
+        body: JSON.stringify({ name: newName, userId: authStore.session?.id }),
       })
 
-      const { message, data } = await response.json()
+      const { message, data: updatedName } = await response.json()
 
       if (!response.ok) {
-        nameError.value = message || 'Failed to change name'
-        toast.error(nameError.value)
-        return false
+        nameError.value = message ?? 'Failed to change name'
+        return
       }
 
-      // Update session with new user data
-      authStore.setSession({ ...authStore.session, name: data.name })
-      toast.success(message)
-      return true
+      authStore.setSession({ ...authStore.session, name: updatedName })
+      toast.success('Name updated successfully')
     } catch (error) {
-      nameError.value = 'Network error occurred'
-      toast.error(nameError.value)
-      console.error('Name change error:', error)
-      return false
+      console.error('Network error changing name:', error)
+      nameError.value = 'Network error. Please check your connection.'
     } finally {
       isChangingName.value = false
     }
@@ -55,8 +50,8 @@ export const useProfile = () => {
     confirmNewPassword: string,
   ) => {
     if (!authStore.session) {
-      passwordError.value = 'User session not found'
-      return false
+      passwordError.value = 'Invalid session'
+      return
     }
 
     passwordError.value = null
@@ -75,21 +70,17 @@ export const useProfile = () => {
         }),
       })
 
-      const result = await response.json()
+      const { message } = await response.json()
 
       if (!response.ok) {
-        passwordError.value = result.message || 'Failed to change password'
-        toast.error(passwordError.value)
-        return false
+        passwordError.value = message ?? 'Failed to change password'
+        return
       }
 
-      toast.success(result.message)
-      return true
+      toast.success('Password updated successfully')
     } catch (error) {
-      passwordError.value = 'Network error occurred'
-      toast.error(passwordError.value)
-      console.error('Password change error:', error)
-      return false
+      console.error('Network error changing password:', error)
+      passwordError.value = 'Network error. Please check your connection.'
     } finally {
       isChangingPassword.value = false
     }

@@ -128,8 +128,11 @@ export const handleSignup = async (
   }
 };
 export const handleLogout = (request: FastifyRequest, reply: FastifyReply) => {
-  const { message } = clearSession(request, reply, false);
-  return reply.status(200).send({ message });
+  clearSession(request, reply, false);
+
+  return reply.status(200).send({
+    message: "User logout successful",
+  });
 };
 
 export const handleAdminLogin = async (
@@ -148,26 +151,23 @@ export const handleAdminLogin = async (
     return reply.status(401).send({ message: "Invalid admin credentials" });
   }
 
-  try {
-    createAdminSession(adminUser.name, reply);
+  createAdminSession(adminUser.name, reply);
 
-    return reply.status(200).send({
-      message: "Admin login successful",
-      data: {
-        name: adminUser.name,
-        role: "admin",
-      },
-    });
-  } catch (error) {
-    console.error("Error in admin login:", error);
-    return reply.status(500).send({ message: "Failed to log in" });
-  }
+  return reply.status(200).send({
+    message: "Admin login successful",
+    data: {
+      name: adminUser.name,
+    },
+  });
 };
 
 export const handleAdminLogout = (
   request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  const { message } = clearSession(request, reply, true);
-  return reply.status(200).send({ message });
+  clearSession(request, reply, true);
+
+  return reply.status(200).send({
+    message: "Admin logout successful",
+  });
 };

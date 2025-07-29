@@ -147,11 +147,11 @@ export const useUpload = () => {
       body: JSON.stringify(presignedUrlData),
     })
 
-    const result = await response.json()
+    const { message, data } = await response.json()
     if (!response.ok) {
-      throw new Error(result.message ?? 'Failed to get presigned URL')
+      throw new Error(message ?? 'Failed to get presigned URL')
     }
-    return result
+    return data
   }
 
   const uploadFile = async (

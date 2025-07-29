@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/authStore'
 import { LayoutDashboard, LogIn } from 'lucide-vue-next'
+import { storeToRefs } from 'pinia'
 import { RouterLink } from 'vue-router'
-import AppLogo from './AppLogo.vue'
-import ModeToggle from './ModeToggle.vue'
-import { Button } from './ui/button'
+import AppLogo from '../AppLogo.vue'
+import ModeToggle from '../ModeToggle.vue'
+import { Button } from '../ui/button'
 
 const { showCallToAction = true } = defineProps<{
   showCallToAction?: boolean
 }>()
 
-const { isAuthenticated } = useAuthStore()
+const authStore = useAuthStore()
+const { isAuthenticated } = storeToRefs(authStore)
 </script>
 
 <template>

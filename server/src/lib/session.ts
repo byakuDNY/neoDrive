@@ -113,7 +113,6 @@ export const clearSession = (
   } else {
     sessions.delete(`session:${sessionId}`);
   }
-  return { message: "Session cleared successfully" };
 };
 
 const setCookie = (

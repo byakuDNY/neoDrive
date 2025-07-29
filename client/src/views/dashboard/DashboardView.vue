@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import CreateFolderDialog from '@/components/CreateFolderDialog.vue'
-import FilePreviewDialog from '@/components/FilePreviewDialog.vue'
-import RenameFileDialog from '@/components/RenameFileDialog.vue'
-import UploadProgress from '@/components/UploadProgress.vue'
-import ViewDetailsDialog from '@/components/ViewDetailsDialog.vue'
+import CreateFolderDialog from '@/components/file/CreateFolderDialog.vue'
+import FilePreviewDialog from '@/components/file/FilePreviewDialog.vue'
+import RenameFileDialog from '@/components/file/RenameFileDialog.vue'
+import UploadProgress from '@/components/file/UploadProgress.vue'
+import ViewDetailsDialog from '@/components/file/ViewDetailsDialog.vue'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
