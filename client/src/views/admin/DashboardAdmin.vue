@@ -65,7 +65,7 @@ const fetchPaymentHistories = async () => {
   error.value = null
 
   try {
-    const response = await fetch('/api/paymentHistories', {
+    const response = await fetch('http://localhost:3000/api/paymentHistories', {
       credentials: 'include',
     })
 
@@ -76,7 +76,9 @@ const fetchPaymentHistories = async () => {
       return
     }
 
-    paymentHistories.value = data.paymentHistories
+    console.log('Payment histories fetched:', data)
+
+    paymentHistories.value = data
   } catch (err) {
     error.value = 'Network error occurred'
     console.error('Error fetching payment histories:', err)
@@ -100,7 +102,7 @@ const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
-  }).format(amount / 100) // Convert from cents
+  }).format(amount) // Convert from cents
 }
 
 onMounted(() => {

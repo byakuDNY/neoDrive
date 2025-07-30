@@ -105,13 +105,6 @@ export const handleCreateCheckoutSession = async (
         user.subscription = "Premium";
         await user.save();
 
-        const paymentDate = new Date();
-        await UserPaymentHistory.create({
-          userId: user.id,
-          subscriptionId: subscription._id.toString(),
-          amount: subscription.price,
-          paymentDate: paymentDate,
-        });
         updateSession(user.id, { subscription: subscription.name as SubscriptionPlan });
         return reply.status(200).send({
           message: "Subscription updated successfully",
