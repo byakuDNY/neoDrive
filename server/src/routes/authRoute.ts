@@ -7,7 +7,7 @@ import {
   handleLogout,
   handleSignup,
 } from "../controllers/authController";
-import { sessions } from "../lib/session";
+import { adminSessions, sessions } from "../lib/session";
 import { User } from "../models/userModel";
 
 export const authRoutes = async (fastify: FastifyInstance) => {
@@ -35,6 +35,30 @@ export const authRoutes = async (fastify: FastifyInstance) => {
         // sessionId: sessionId.substring(0, 8) + "...", // Hide full ID
         sessionId: sessionId,
         userId: session.id,
+        name: session.name,
+        email: session.email,
+        subscription: session.subscription,
+        createdAt: session.createdAt,
+        expiresAt: session.expiresAt,
+        isExpired: Date.now() > session.expiresAt,
+      });
+    }
+
+    return {
+      totalSessions: sessions.size,
+      sessions: sessionList,
+    };
+  });
+
+  fastify.get("/debug/admin-sessions", async () => {
+    const sessionList = [];
+
+    for (const [sessionId, session] of adminSessions) {
+      sessionList.push({
+        // sessionId: sessionId.substring(0, 8) + "...", // Hide full ID
+        sessionId: sessionId,
+        userId: session.id,
+        name: session.name,
         createdAt: session.createdAt,
         expiresAt: session.expiresAt,
         isExpired: Date.now() > session.expiresAt,

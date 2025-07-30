@@ -36,10 +36,10 @@ export const getSession = (request: FastifyRequest, isAdmin: boolean) => {
     request.cookies[isAdmin ? ADMIN_COOKIE_SESSION_KEY : COOKIE_SESSION_KEY];
   if (!sessionId) return;
 
-  // if (isAdmin) {
-  //   return adminSessions.get(`admin_session:${sessionId}`);
-  // }
-  return sessions.get(`${isAdmin ? `admin_` : ""}session:${sessionId}`);
+  if (isAdmin) {
+    return adminSessions.get(`admin_session:${sessionId}`);
+  }
+  return sessions.get(`session:${sessionId}`);
 };
 
 export const createSession = (user: IUser, reply: FastifyReply) => {

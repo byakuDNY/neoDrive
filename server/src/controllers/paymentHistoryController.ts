@@ -7,6 +7,10 @@ export const getPaymentHistories = async (
   reply: FastifyReply
 ) => {
   try {
+    const session = getSession(request, true);
+    if (!session) {
+      return reply.status(401).send({ message: "Invalid session" });
+    }
 
     const paymentHistories = await UserPaymentHistory.find()
       .populate("subscriptionId", "name price") // Populate subscription details
