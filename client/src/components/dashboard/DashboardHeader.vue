@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useLogout } from '@/composables/useLogout'
 import type { SelectFile } from '@/lib/types'
-import { getInitials } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 import { useFileStore } from '@/stores/fileStore'
 import Fuse from 'fuse.js'
@@ -17,7 +16,7 @@ import { LogOut, Search, X } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import ModeToggle from '../ModeToggle.vue'
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
+import { Avatar, AvatarImage } from '../ui/avatar'
 import { Input } from '../ui/input'
 
 const router = useRouter()
@@ -142,7 +141,6 @@ const clearSearch = () => {
           <DropdownMenuTrigger class="cursor-pointer" as-child>
             <Avatar class="size-10">
               <AvatarImage src="/profile.svg" alt="User avatar" class="object-cover" />
-              <AvatarFallback>{{ getInitials(session?.name) }}</AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
           <DropdownMenuContent class="w-56" align="end">
@@ -150,7 +148,6 @@ const clearSearch = () => {
               <div class="flex items-center gap-2 px-1 py-1.5">
                 <Avatar class="size-8 overflow-hidden rounded-full">
                   <AvatarImage src="/profile.svg" alt="User avatar" class="object-cover" />
-                  <AvatarFallback class="">{{ getInitials(session?.name) }}</AvatarFallback>
                 </Avatar>
                 <div class="flex flex-col text-left">
                   <span class="truncate text-base font-medium">{{ session?.name }}</span>

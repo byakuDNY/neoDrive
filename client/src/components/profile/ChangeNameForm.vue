@@ -53,7 +53,11 @@ const onFormFocus = () => {
       <form @submit.prevent="onSubmit" class="space-y-6">
         <div>
           <Label>Current Name</Label>
-          <Input :value="authStore.session?.name" disabled class="text-gray-500 mt-1" />
+          <Input
+            :value="authStore.session?.name"
+            disabled
+            class="bg-transparent text-gray-500 mt-1"
+          />
         </div>
 
         <FormField
