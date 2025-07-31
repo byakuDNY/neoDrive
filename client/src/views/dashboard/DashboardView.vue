@@ -32,13 +32,12 @@ import {
   X,
 } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
-import { toast } from 'vue-sonner'
 
 const fileStore = useFileStore()
 const {
-  handleUpload,
+  processUpload,
   isLoading,
-  error: uploadError,
+  errorMessage: uploadError,
   uploads,
   showProgress,
   cancelUpload,
@@ -64,7 +63,6 @@ const currentItems = computed(() => {
   })
 })
 
-// Build breadcrumb path
 const breadcrumbPath = computed(() => {
   if (currentPath.value === '/') return []
 
@@ -80,12 +78,34 @@ const breadcrumbPath = computed(() => {
   return breadcrumbs
 })
 
-const redirectToHome = () => {
-  currentPath.value = '/'
+const createNewFolder = async (name: string) => {
+  try {
+    clearError()
+    await processUpload(currentPath.value, 'folder', undefined, name)
+  } catch (error) {
+    console.error('Failed to create folder:', error)
+    uploadError.value = error instanceof Error ? error.message : 'Failed to create folder'
+  } finally {
+    isLoading.value = false
+  }
 }
 
-const navigateToPath = (path: string) => {
-  currentPath.value = path.endsWith('/') ? path : `${path}/`
+const handleFileChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const files = input.files
+
+  if (files && files.length > 0) {
+    try {
+      clearError()
+      await processUpload(currentPath.value, 'file', files)
+    } catch (error) {
+      console.error('Upload failed:', error)
+      uploadError.value = error instanceof Error ? error.message : 'Failed to upload files'
+    } finally {
+      input.value = ''
+      isLoading.value = false
+    }
+  }
 }
 
 const onFileSelect = (item: SelectFile) => {
@@ -101,37 +121,12 @@ const onFileSelect = (item: SelectFile) => {
   }
 }
 
-const createNewFolder = async (name: string) => {
-  try {
-    await handleUpload(currentPath.value, 'folder', undefined, name)
-  } catch (error) {
-    console.error('Failed to create folder:', error)
-    toast.error('Failed to create folder')
-  }
-}
-
-const handleFileChange = async (event: Event) => {
-  const input = event.target as HTMLInputElement
-  const files = input.files
-
-  if (files && files.length > 0) {
-    try {
-      clearError()
-      await handleUpload(currentPath.value, 'file', files)
-    } catch (error) {
-      console.error('Upload failed:', error)
-    } finally {
-      input.value = ''
-    }
-  }
-}
-
-const viewFileDetails = (item: SelectFile) => {
+const openFileDetailsDialog = (item: SelectFile) => {
   selectedFile.value = item
   showViewDetails.value = true
 }
 
-const handleRename = (item: SelectFile) => {
+const openRenameFileDialog = (item: SelectFile) => {
   selectedFile.value = item
   showRenameDialog.value = true
 }
@@ -193,14 +188,14 @@ const onUploadButtonClick = () => {
       </div>
     </section>
 
-    <!-- Error Alert -->
+    <!-- Upload Error Alert -->
     <div
       v-if="uploadError"
-      class="mb-4 p-4 bg-red-50 border-2 border-red-200 rounded-base shadow-shadow flex items-center justify-between"
+      class="mb-4 p-4 bg-secondary-background border-2 border-border rounded-base shadow-shadow flex items-center justify-between"
     >
-      <div class="flex items-center">
-        <AlertCircle class="text-red-500" />
-        <span class="text-red-700">{{ uploadError }}</span>
+      <div class="flex items-center text-red-500">
+        <AlertCircle class="mr-2" />
+        <span class="">{{ uploadError }}</span>
       </div>
       <Button variant="neutral" size="sm" @click="clearError">
         <X />
@@ -224,7 +219,7 @@ const onUploadButtonClick = () => {
       <!-- Breadcrumb Navigation -->
       <nav class="border-b-2 border-border p-2">
         <div class="flex items-center space-x-2 overflow-x-auto">
-          <Button variant="neutral" class="m-1" @click="redirectToHome">root</Button>
+          <Button variant="neutral" class="m-1" @click="currentPath = '/'">root</Button>
 
           <div
             v-for="breadcrumb in breadcrumbPath"
@@ -234,7 +229,7 @@ const onUploadButtonClick = () => {
             <ChevronRight />
             <Button
               variant="neutral"
-              @click="navigateToPath(breadcrumb.path)"
+              @click="currentPath = breadcrumb.path"
               :title="breadcrumb.name"
               class="truncate max-w-[150px]"
             >
@@ -315,11 +310,11 @@ const onUploadButtonClick = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem v-if="item.type === 'file'" @click="viewFileDetails(item)">
+                <DropdownMenuItem v-if="item.type === 'file'" @click="openFileDetailsDialog(item)">
                   <Eye />
                   View Details
                 </DropdownMenuItem>
-                <DropdownMenuItem @click="handleRename(item)">
+                <DropdownMenuItem @click="openRenameFileDialog(item)">
                   <FolderPen />
                   Rename
                 </DropdownMenuItem>

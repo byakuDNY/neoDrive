@@ -83,3 +83,23 @@ export const formatDate = (date: Date) => {
     minute: '2-digit',
   }).format(new Date(date))
 }
+
+export const validateFileSizes = async (files: FileList, remainingStorage: number | undefined) => {
+  if (!remainingStorage) {
+    return {
+      error: true,
+      errorMessage: 'Unable to check storage limits. Please try again.',
+    }
+  }
+
+  const totalFileSize = Array.from(files).reduce((sum, file) => sum + file.size, 0)
+
+  if (totalFileSize > remainingStorage) {
+    return {
+      error: true,
+      errorMessage: `Upload size (${formatBytes(totalFileSize)}) exceeds remaining storage (${formatBytes(remainingStorage)}). Please upgrade your subscription or delete some files.`,
+    }
+  }
+
+  return { error: false, errorMessage: null }
+}

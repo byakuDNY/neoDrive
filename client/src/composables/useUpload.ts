@@ -1,5 +1,5 @@
 import type { FileMetadata, PresignedUrl, UploadItem } from '@/lib/types'
-import { getFileInfo } from '@/lib/utils'
+import { getFileInfo, validateFileSizes } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 import { useBucketStore } from '@/stores/bucketStore'
 import { useFileStore } from '@/stores/fileStore'
@@ -7,9 +7,9 @@ import { ref } from 'vue'
 import { toast } from 'vue-sonner'
 
 export const useUpload = () => {
+  const authStore = useAuthStore()
+  const bucketStore = useBucketStore()
   const { refetch } = useFileStore()
-  const { session } = useAuthStore()
-  const { loadSubscriptionUsage } = useBucketStore()
 
   const uploads = ref<UploadItem[]>([])
   const isLoading = ref(false)
@@ -23,7 +23,7 @@ export const useUpload = () => {
     files?: FileList,
     folderName?: string,
   ) => {
-    if (!session) {
+    if (!authStore.session) {
       errorMessage.value = 'User session not found'
       return
     }
@@ -38,6 +38,15 @@ export const useUpload = () => {
 
       if (!files || files.length === 0) {
         errorMessage.value = 'No files selected'
+        return
+      }
+
+      const validationResult = await validateFileSizes(
+        files,
+        bucketStore.subscriptionUsage?.remainingStorage,
+      )
+      if (validationResult.error) {
+        errorMessage.value = validationResult.errorMessage
         return
       }
 
@@ -56,9 +65,9 @@ export const useUpload = () => {
       )
       await Promise.allSettled(uploadPromises)
 
-      await Promise.all([refetch(), loadSubscriptionUsage()])
+      await Promise.all([refetch(), bucketStore.loadSubscriptionUsage()])
     } catch (error) {
-      console.error('Error uploading files: ', error)
+      console.error('Error uploading files:', error)
       errorMessage.value = error instanceof Error ? error.message : 'Upload failed'
     } finally {
       isLoading.value = false
@@ -69,7 +78,7 @@ export const useUpload = () => {
     try {
       const folderMetadataPayload: FileMetadata = {
         s3Key: null,
-        userId: session!.id,
+        userId: authStore.session!.id,
         name: folderName,
         type: 'folder',
         size: 0,
@@ -83,7 +92,7 @@ export const useUpload = () => {
       await refetch()
     } catch (error) {
       console.error('Error creating folder:', error)
-      errorMessage.value = error instanceof Error ? error.message : 'Failed to create folder'
+      errorMessage.value = error instanceof Error ? error.message : `Failed to create ${folderName}`
     } finally {
       isLoading.value = false
     }
@@ -94,7 +103,7 @@ export const useUpload = () => {
       uploadItem.status = 'uploading'
 
       const presignedUrlPayload: PresignedUrl = {
-        userId: session!.id,
+        userId: authStore.session!.id,
         name: uploadItem.file.name,
         size: uploadItem.file.size,
         mimeType: uploadItem.file.type,
@@ -106,7 +115,7 @@ export const useUpload = () => {
 
       const fileMetadata: FileMetadata = {
         s3Key: uniqueKey,
-        userId: session!.id,
+        userId: authStore.session!.id,
         name: uploadItem.file.name,
         type: 'file',
         size: uploadItem.file.size,
@@ -122,20 +131,17 @@ export const useUpload = () => {
         uploadItem.progress = progress
       })
 
-      // Mark as completed
       uploadItem.status = 'completed'
       uploadItem.progress = 100
       activeRequests.value.delete(uploadItem.id)
-    } catch (err) {
-      if (err instanceof Error && err.message === 'Upload cancelled') {
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Upload cancelled') {
         uploadItem.status = 'cancelled'
-        uploadItem.error = 'Cancelled by user'
       } else {
         uploadItem.status = 'error'
-        uploadItem.error = err instanceof Error ? err.message : 'Unknown error'
       }
       activeRequests.value.delete(uploadItem.id)
-      throw err
+      console.error(`Error uploading ${uploadItem.name}:`, error)
     }
   }
 
@@ -149,6 +155,7 @@ export const useUpload = () => {
 
     const { message, data } = await response.json()
     if (!response.ok) {
+      console.error('Error getting presigned URL:', message)
       throw new Error(message ?? 'Failed to get presigned URL')
     }
     return data
@@ -182,7 +189,7 @@ export const useUpload = () => {
       })
 
       xhr.addEventListener('error', () => {
-        reject(new Error('Network error during upload'))
+        reject(new Error(`Error uploading ${file.name}`))
       })
 
       xhr.addEventListener('timeout', () => {
@@ -195,7 +202,7 @@ export const useUpload = () => {
 
       xhr.open('PUT', presignedUrl)
       xhr.setRequestHeader('Content-Type', file.type)
-      xhr.timeout = 300000 // 5 minute timeout
+      xhr.timeout = 1800000 // 30 minute timeout (in milliseconds)
       xhr.send(file)
     })
   }
@@ -208,10 +215,10 @@ export const useUpload = () => {
       body: JSON.stringify(payload),
     })
 
-    const result = await response.json()
+    const { message } = await response.json()
     if (!response.ok) {
-      console.error('Failed to store file metadata: ', result.message)
-      throw new Error(result.message ?? 'Failed to store file metadata')
+      console.error(`Error storing ${payload.name} metadata:`, message)
+      throw new Error(message ?? `Failed to store ${payload.name} metadata`)
     }
   }
 
@@ -225,7 +232,6 @@ export const useUpload = () => {
     const upload = uploads.value.find((upload) => upload.id === id)
     if (upload) {
       upload.status = 'cancelled'
-      upload.error = 'Cancelled by user'
     }
   }
 
@@ -253,9 +259,9 @@ export const useUpload = () => {
   }
 
   return {
-    handleUpload: processUpload,
+    processUpload,
     isLoading,
-    error: errorMessage,
+    errorMessage,
     uploads,
     showProgress,
     cancelUpload,

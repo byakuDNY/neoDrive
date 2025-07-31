@@ -15,17 +15,16 @@ const emit = defineEmits<{
 }>()
 
 const totalProgress = computed(() => {
-  if (props.uploads.length === 0) return 0
   const totalPercent = props.uploads.reduce((sum, upload) => sum + upload.progress, 0)
   return Math.round(totalPercent / props.uploads.length)
 })
 
-const cancelledCount = computed(() => {
-  return props.uploads.filter((upload) => upload.status === 'cancelled').length
-})
-
 const completedCount = computed(() => {
   return props.uploads.filter((upload) => upload.status === 'completed').length
+})
+
+const cancelledCount = computed(() => {
+  return props.uploads.filter((upload) => upload.status === 'cancelled').length
 })
 
 const errorCount = computed(() => {
@@ -72,10 +71,7 @@ const handleDismiss = () => {
 
     <!-- Overall Progress -->
     <div class="space-y-2">
-      <div class="flex justify-between text-sm">
-        <span>Overall Progress</span>
-        <span>{{ totalProgress }}%</span>
-      </div>
+      <span class="text-sm block">Overall Progress: {{ totalProgress }}%</span>
       <div class="w-full bg-gray-200 rounded-full h-2">
         <div
           class="h-2 rounded-full transition-all duration-300"
@@ -90,13 +86,13 @@ const handleDismiss = () => {
       <div
         v-for="upload in uploads"
         :key="upload.id"
-        class="flex items-center space-x-3 p-2 bg-gray-50 rounded-base"
+        class="flex items-center space-x-3 p-2 bg-secondary-background rounded-base"
       >
         <!-- Status Icon -->
         <div class="flex-shrink-0">
           <CheckCircle v-if="upload.status === 'completed'" class="text-green-500" />
           <XCircle v-else-if="upload.status === 'error'" class="text-red-500" />
-          <X v-else-if="upload.status === 'cancelled'" class="text-gray-500" />
+          <X v-else-if="upload.status === 'cancelled'" class="text-yellow-500" />
           <Loader2 v-else class="animate-spin text-main" />
         </div>
 
@@ -117,10 +113,18 @@ const handleDismiss = () => {
                 :style="{ width: `${upload.progress}%` }"
               ></div>
             </div>
-            <div class="flex justify-between text-xs text-gray-500 mt-1">
+            <div
+              v-if="upload.status === 'pending' || upload.status === 'uploading'"
+              class="flex justify-between text-xs text-gray-500 mt-1"
+            >
               <span>{{ upload.status === 'pending' ? 'Waiting...' : 'Uploading...' }}</span>
               <span>{{ upload.progress }}%</span>
             </div>
+          </div>
+
+          <!-- Success Message -->
+          <div v-if="upload.status === 'completed'" class="mt-1">
+            <p class="text-xs text-green-500">Upload completed</p>
           </div>
 
           <!-- Error Message -->
@@ -128,14 +132,10 @@ const handleDismiss = () => {
             <p class="text-xs text-red-500">{{ upload.error || 'Upload failed' }}</p>
           </div>
 
-          <!-- Success Message -->
-          <div v-if="upload.status === 'completed'" class="mt-1">
-            <p class="text-xs text-green-500">Upload completed</p>
+          <!-- Cancelled Message -->
+          <div v-if="upload.status === 'cancelled'" class="mt-1">
+            <p class="text-xs text-yellow-500">Upload cancelled</p>
           </div>
-        </div>
-
-        <div v-if="upload.status === 'cancelled'" class="mt-1">
-          <p class="text-xs text-gray-500">Upload cancelled</p>
         </div>
 
         <!-- Cancel Button -->
@@ -151,15 +151,14 @@ const handleDismiss = () => {
     </div>
 
     <!-- Summary -->
-    <div v-if="isCompleted" class="pt-2 border-t border-gray-200">
+    <div v-if="isCompleted" class="pt-2 border-t border-gray-500">
       <div class="flex items-center justify-between text-sm">
         <span v-if="errorCount === 0 && cancelledCount === 0" class="text-green-500">
           All {{ uploads.length }} files uploaded successfully!
         </span>
-        <span v-else class="text-yellow-500">
+        <span v-else class="text-red-500">
           {{ completedCount }} uploaded, {{ errorCount }} failed, {{ cancelledCount }} cancelled
         </span>
-        <Button variant="neutral" size="sm" @click="handleDismiss"> Dismiss </Button>
       </div>
     </div>
   </div>

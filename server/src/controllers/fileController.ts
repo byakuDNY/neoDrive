@@ -136,6 +136,29 @@ export const handleStoreFileMetadata = async (
     const validation = await validateSession(request, reply, data.userId);
     if (!validation) return;
 
+    const { session } = validation;
+
+    const usedStorage = await calculateUsedStorage(session.id);
+
+    const storageLimit =
+      SUBSCRIPTION_LIMITS[
+        session.subscription as keyof typeof SUBSCRIPTION_LIMITS
+      ];
+
+    if (usedStorage + data.size > storageLimit) {
+      return reply.status(403).send({
+        message:
+          "Storage limit exceeded. Please upgrade your subscription or delete some files.",
+      });
+    }
+  } catch (error) {
+    console.error("Error checking storage usage:", error);
+    return reply.status(500).send({
+      message: "Failed to check storage usage",
+    });
+  }
+
+  try {
     const existingFile = await File.findOne({
       name: data.name,
       userId: data.userId,
