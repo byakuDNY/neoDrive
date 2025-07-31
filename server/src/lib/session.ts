@@ -76,8 +76,6 @@ export const updateSession = (
       sessions.set(sessionId, updatedSession);
     }
   }
-  // console.log(`Updated sessions for user ${userId}`);
-  // console.log('All current sessions:', Array.from(sessions.entries()));
 };
 
 export const createAdminSession = (adminName: string, reply: FastifyReply) => {

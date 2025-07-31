@@ -41,7 +41,7 @@ export const useAuthStore = defineStore(
         }
 
         console.log('Session updated:', updatedData.value)
-        setSession(updatedData.value)
+        setSession(updatedData.value.data)
       } catch (error) {
         console.error('Session check error:', error)
         clearSession()
