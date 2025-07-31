@@ -37,7 +37,7 @@ export const validateSession = async (
   reply: FastifyReply,
   userId: string
 ) => {
-  const session = getSession(request, false);
+  const session = getSession(request);
   if (!session) {
     return reply.status(401).send({ message: "Invalid session" });
   }

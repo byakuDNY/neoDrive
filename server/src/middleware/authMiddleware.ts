@@ -5,7 +5,7 @@ export const sessionUpdateMiddleware = async (
   request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  const session = getSession(request, false);
+  const session = getSession(request);
 
   if (session) {
     updateSessionExpiration(request, reply);

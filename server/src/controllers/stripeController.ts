@@ -8,7 +8,6 @@ import { stripeClient } from "../lib/stripe";
 import { validateSession } from "../lib/utils";
 import { Subscription } from "../models/subscriptionsModel";
 import { SubscriptionPlan, User } from "../models/userModel";
-import { UserPaymentHistory } from "../models/userPaymentHistoryModel";
 
 export const handleCreateProduct = async (
   request: FastifyRequest,
@@ -16,7 +15,7 @@ export const handleCreateProduct = async (
 ) => {
   const { success, data } = createProductSchema.safeParse(request.body);
   if (!success) {
-    return reply.status(400).send({ message: "Invalid product creation data" });
+    return reply.status(400).send({ message: "Invalid data" });
   }
 
   try {
@@ -60,7 +59,7 @@ export const handleCreateCheckoutSession = async (
   if (!success) {
     return reply.status(400).send({ message: "Invalid checkout session data" });
   }
-  
+
   try {
     const validation = await validateSession(request, reply, data.userId);
     if (!validation) return;
@@ -105,7 +104,9 @@ export const handleCreateCheckoutSession = async (
         user.subscription = "Premium";
         await user.save();
 
-        updateSession(user.id, { subscription: subscription.name as SubscriptionPlan });
+        updateSession(user.id, {
+          subscription: subscription.name as SubscriptionPlan,
+        });
         return reply.status(200).send({
           message: "Subscription updated successfully",
           subscription: updatedSubscription,
@@ -185,16 +186,18 @@ export const handleCancelSubscription = async (
   reply: FastifyReply
 ) => {
   try {
-    const userSession = getSession(request, false);
+    const userSession = getSession(request);
     if (!userSession) {
       return reply.status(401).send({ message: "Unauthorized" });
     }
     const user = await User.findOne({ id: userSession.id });
     if (!user) {
-      return reply.status(404).send({ message: "User not found" });;
+      return reply.status(404).send({ message: "User not found" });
     }
     if (!user.subscriptionId) {
-      return reply.status(400).send({ message: "No active subscription found" });
+      return reply
+        .status(400)
+        .send({ message: "No active subscription found" });
     }
     const subscription = await stripeClient.subscriptions.retrieve(
       user.subscriptionId
@@ -206,9 +209,11 @@ export const handleCancelSubscription = async (
       cancel_at_period_end: true,
     });
     console.log("Subscription cancellation scheduled successfully");
-    return reply.status(200).send({ message: "Subscription cancellation scheduled successfully" });
+    return reply
+      .status(200)
+      .send({ message: "Subscription cancellation scheduled successfully" });
   } catch (error) {
     console.error("Error processing cancelled subscription:", error);
     return reply.status(500).send({ message: "Internal server error" });
   }
-}
+};

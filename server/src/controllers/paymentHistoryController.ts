@@ -1,5 +1,5 @@
 import { FastifyReply, FastifyRequest } from "fastify";
-import { getSession } from "../lib/session";
+import { getAdminSession } from "../lib/session";
 import { UserPaymentHistory } from "../models/userPaymentHistoryModel";
 
 export const getPaymentHistories = async (
@@ -7,7 +7,7 @@ export const getPaymentHistories = async (
   reply: FastifyReply
 ) => {
   try {
-    const session = getSession(request, true);
+    const session = getAdminSession(request);
     if (!session) {
       return reply.status(401).send({ message: "Invalid session" });
     }

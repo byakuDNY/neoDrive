@@ -24,7 +24,7 @@ export const handleGetFiles = async (
   request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  const session = getSession(request, false);
+  const session = getSession(request);
   if (!session) {
     return reply.status(401).send({
       message: "Invalid session",
@@ -316,7 +316,7 @@ export const handleGetStorageUsage = async (
   request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  const session = getSession(request, false);
+  const session = getSession(request);
   if (!session) {
     return reply.status(401).send({
       message: "Invalid session",
