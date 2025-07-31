@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ModeToggle from '@/components/ModeToggle.vue'
 import { Button } from '@/components/ui/button'
 import { formatDate } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
@@ -15,7 +16,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 interface PaymentHistory {
-  _id: string
+  // _id: string
   userId: string
   subscriptionId: {
     name: string
@@ -34,6 +35,8 @@ const router = useRouter()
 
 const logout = async () => {
   isLoading.value = true
+  const { clearAdminSession } = useAuthStore()
+
   try {
     const response = await fetch(`/api/auth/admin/logout`, {
       method: 'POST',
@@ -46,17 +49,12 @@ const logout = async () => {
       console.error('Logout failed:', data.message)
     }
 
-    const { clearAdminSession } = useAuthStore()
-    clearAdminSession()
-
     router.push('/')
   } catch (error) {
     console.error('Logout error:', error)
-
-    const { clearAdminSession } = useAuthStore()
-    clearAdminSession()
   } finally {
     isLoading.value = false
+    clearAdminSession()
   }
 }
 
@@ -65,18 +63,70 @@ const fetchPaymentHistories = async () => {
   error.value = null
 
   try {
-    const response = await fetch('http://localhost:3000/api/paymentHistories', {
-      credentials: 'include',
-    })
+    // const response = await fetch('http://localhost:3000/api/paymentHistories', {
+    //   credentials: 'include',
+    // })
 
-    const { message, data } = await response.json()
+    // const { message, data } = await response.json()
 
-    if (!response.ok) {
-      error.value = message || 'Failed to fetch payment histories'
-      return
-    }
+    // if (!response.ok) {
+    //   error.value = message || 'Failed to fetch payment histories'
+    //   return
+    // }
 
-    console.log('Payment histories fetched:', data)
+    const data = [
+      {
+        userId: '64f8a1b2c3d4e5f6a7b8c9d0',
+        subscriptionId: {
+          name: 'Pro Plan',
+          price: 1999,
+        },
+        amount: 1999,
+        paymentDate: new Date('2024-01-15T10:30:00Z'),
+        stripeSubscriptionId: 'sub_1OaKb2CK7i8qQ5F6GxR4Hm9N',
+      },
+      {
+        userId: '64f8a1b2c3d4e5f6a7b8c9d1',
+        subscriptionId: {
+          name: 'Basic Plan',
+          price: 999,
+        },
+        amount: 999,
+        paymentDate: new Date('2024-01-20T14:45:00Z'),
+        stripeSubscriptionId: 'sub_1OaKc3DL8j9rR6G7HyS5In0O',
+      },
+      {
+        userId: '64f8a1b2c3d4e5f6a7b8c9d2',
+        subscriptionId: {
+          name: 'Enterprise Plan',
+          price: 4999,
+        },
+        amount: 4999,
+        paymentDate: new Date('2024-01-25T09:15:00Z'),
+        stripeSubscriptionId: 'sub_1OaKd4EM9k0sS7H8IzT6Jo1P',
+      },
+      {
+        userId: '64f8a1b2c3d4e5f6a7b8c9d3',
+        subscriptionId: {
+          name: 'Pro Plan',
+          price: 1999,
+        },
+        amount: 1999,
+        paymentDate: new Date('2024-02-01T16:20:00Z'),
+      },
+      {
+        userId: '64f8a1b2c3d4e5f6a7b8c9d4',
+        subscriptionId: {
+          name: 'Basic Plan',
+          price: 999,
+        },
+        amount: 999,
+        paymentDate: new Date('2024-02-05T11:00:00Z'),
+        stripeSubscriptionId: 'sub_1OaKf6GN0l2tT9I0KzU8Kp3R',
+      },
+    ]
+
+    // console.log('Payment histories fetched:', data)
 
     paymentHistories.value = data
   } catch (err) {
@@ -120,28 +170,28 @@ onMounted(() => {
         </div>
         <div>
           <h1 class="text-2xl font-heading">Admin Dashboard</h1>
-          <p class="text-muted-foreground">Manage your application and view analytics</p>
+          <p class="text-gray-500">Manage your application and view analytics</p>
         </div>
       </div>
-
-      <Button @click="logout" :disabled="isLoading" variant="neutral">
-        <LogOut v-if="!isLoading" class="size-4 mr-2" />
-        <div v-else class="flex items-center">
-          <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-        </div>
-        {{ isLoading ? 'Logging out...' : 'Logout' }}
-      </Button>
+      <div class="flex items-center space-x-4">
+        <ModeToggle />
+        <Button @click="logout" :disabled="isLoading" variant="neutral">
+          <LogOut v-if="!isLoading" />
+          <Loader2 v-else class="animate-spin" />
+          {{ isLoading ? 'Logging out...' : 'Logout' }}
+        </Button>
+      </div>
     </div>
 
     <!-- Stats Cards -->
     <div class="grid gap-4 md:grid-cols-3 mb-6">
       <div class="bg-background border-2 border-border rounded-base shadow-shadow p-6">
         <div class="flex items-center space-x-3">
-          <div class="p-2 bg-green-100 rounded-base">
-            <DollarSign class="size-6 text-green-600" />
+          <div class="p-2 bg-secondary-background rounded-base">
+            <DollarSign class="size-6 text-green-500" />
           </div>
           <div>
-            <p class="text-sm text-muted-foreground">Total Revenue</p>
+            <p class="text-sm text-gray-500">Total Revenue</p>
             <p class="text-2xl font-heading">{{ formatCurrency(totalRevenue) }}</p>
           </div>
         </div>
@@ -149,11 +199,11 @@ onMounted(() => {
 
       <div class="bg-background border-2 border-border rounded-base shadow-shadow p-6">
         <div class="flex items-center space-x-3">
-          <div class="p-2 bg-blue-100 rounded-base">
-            <CreditCard class="size-6 text-blue-600" />
+          <div class="p-2 bg-secondary-background rounded-base">
+            <CreditCard class="size-6 text-blue-500" />
           </div>
           <div>
-            <p class="text-sm text-muted-foreground">Total Transactions</p>
+            <p class="text-sm text-gray-500">Total Transactions</p>
             <p class="text-2xl font-heading">{{ totalTransactions }}</p>
           </div>
         </div>
@@ -161,11 +211,11 @@ onMounted(() => {
 
       <div class="bg-background border-2 border-border rounded-base shadow-shadow p-6">
         <div class="flex items-center space-x-3">
-          <div class="p-2 bg-purple-100 rounded-base">
-            <Users class="size-6 text-purple-600" />
+          <div class="p-2 bg-secondary-background rounded-base">
+            <Users class="size-6 text-purple-500" />
           </div>
           <div>
-            <p class="text-sm text-muted-foreground">Paying Users</p>
+            <p class="text-sm text-gray-500">Paying Users</p>
             <p class="text-2xl font-heading">{{ uniqueUsers }}</p>
           </div>
         </div>
@@ -178,10 +228,10 @@ onMounted(() => {
     >
       <div class="p-6 border-b border-border">
         <div class="flex items-center space-x-2 mb-2">
-          <CreditCard class="size-5" />
+          <CreditCard />
           <h2 class="text-lg font-heading">Payment History</h2>
         </div>
-        <p class="text-sm text-muted-foreground">View all subscription payments and transactions</p>
+        <p class="text-sm text-gray-500">View all subscription payments and transactions</p>
       </div>
 
       <!-- Loading State -->
@@ -220,7 +270,6 @@ onMounted(() => {
           <tbody>
             <tr
               v-for="payment in paymentHistories"
-              :key="payment._id"
               class="border-b border-border hover:bg-secondary-background/50 transition-colors"
             >
               <td class="p-4">
@@ -231,19 +280,19 @@ onMounted(() => {
               <td class="p-4">
                 <div class="space-y-1">
                   <div class="font-medium">{{ payment.subscriptionId.name }}</div>
-                  <div class="text-sm text-muted-foreground">
+                  <div class="text-sm text-gray-500">
                     {{ formatCurrency(payment.subscriptionId.price) }}/month
                   </div>
                 </div>
               </td>
               <td class="p-4">
-                <div class="font-medium text-green-600">
+                <div class="font-medium text-green-500">
                   {{ formatCurrency(payment.amount) }}
                 </div>
               </td>
               <td class="p-4">
                 <div class="flex items-center space-x-2">
-                  <Calendar class="size-4 text-muted-foreground" />
+                  <Calendar class="size-4 text-gray-500" />
                   <span class="text-sm">{{ formatDate(payment.paymentDate) }}</span>
                 </div>
               </td>
@@ -255,7 +304,7 @@ onMounted(() => {
                 >
                   {{ payment.stripeSubscriptionId }}
                 </div>
-                <div v-else class="text-muted-foreground text-sm">N/A</div>
+                <div v-else class="text-gray-500 text-sm">N/A</div>
               </td>
             </tr>
           </tbody>
