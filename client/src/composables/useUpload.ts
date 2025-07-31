@@ -125,11 +125,11 @@ export const useUpload = () => {
         category: getFileInfo(uploadItem.file.type).category,
       }
 
-      await storeMetadata(fileMetadata)
-
       await uploadFile(uploadItem.file, presignedUrl, uploadItem.id, (progress) => {
         uploadItem.progress = progress
       })
+
+      await storeMetadata(fileMetadata)
 
       uploadItem.status = 'completed'
       uploadItem.progress = 100
