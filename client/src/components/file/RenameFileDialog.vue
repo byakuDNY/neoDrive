@@ -85,24 +85,24 @@ async function onSubmit(values: any) {
   }
 }
 </script>
-
 <template>
-  <Dialog v-model:open="isOpen">
-    <DialogContent class="sm:max-w-[425px]">
-      <DialogHeader>
-        <DialogTitle class="flex items-center gap-2 capitalize">
-          <FolderPen />
-          Rename {{ props.file?.type }}
-        </DialogTitle>
-      </DialogHeader>
+  <Form
+    v-if="props.file"
+    :key="formKey"
+    v-slot="{ handleSubmit }"
+    keep-values
+    :validation-schema="formSchema"
+    :initial-values="initialValues"
+  >
+    <Dialog v-model:open="isOpen">
+      <DialogContent class="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle class="flex items-center gap-2 capitalize">
+            <FolderPen />
+            Rename {{ props.file?.type }}
+          </DialogTitle>
+        </DialogHeader>
 
-      <Form
-        v-if="props.file"
-        :key="formKey"
-        v-slot="{ handleSubmit }"
-        :validation-schema="formSchema"
-        :initial-values="initialValues"
-      >
         <form id="renameForm" @submit="handleSubmit($event, onSubmit)">
           <FormField v-slot="{ componentField }" name="name">
             <FormItem>
@@ -124,7 +124,7 @@ async function onSubmit(values: any) {
           <Button variant="neutral" @click="isOpen = false"> Cancel </Button>
           <Button type="submit" form="renameForm"> Rename </Button>
         </DialogFooter>
-      </Form>
-    </DialogContent>
-  </Dialog>
+      </DialogContent>
+    </Dialog>
+  </Form>
 </template>
