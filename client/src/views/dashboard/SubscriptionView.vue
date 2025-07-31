@@ -1,9 +1,21 @@
 <script setup lang="ts">
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { PRICING_PLANS } from '@/lib/constants'
+import type { SubscriptionPlan } from '@/lib/types'
 import { formatBytes } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 import { useBucketStore } from '@/stores/bucketStore'
@@ -31,6 +43,11 @@ const paymentSuccess = ref(false)
 const paymentMessage = ref('')
 const isLoading = ref(false)
 
+const showUpgradeDialog = ref(false)
+const pendingPlanName = ref<SubscriptionPlan | null>(null)
+const upgradeDialogTitle = ref('')
+const upgradeDialogDescription = ref('')
+
 const currentPlan = computed(() => {
   const subscription = authStore.session?.subscription || 'Free'
   return PRICING_PLANS.find((plan) => plan.name === subscription)
@@ -49,115 +66,105 @@ const isStorageCritical = computed(() => {
 })
 
 onMounted(async () => {
-  await bucketStore.loadSubscriptionUsage()
-
   // Check for payment result in URL
   const urlParams = new URLSearchParams(window.location.search)
   if (urlParams.get('success') === 'true') {
     showPaymentResult.value = true
     paymentSuccess.value = true
-    paymentMessage.value = 'Payment successful! Your subscription has been updated.'
-    // Refresh user session to get updated subscription
-    await authStore.checkSession()
-    toast.success('Payment successful! Your subscription has been updated.')
+    paymentMessage.value = 'Payment successful! Your subscription has been updated'
 
-    // Clean up URL
-    window.history.replaceState({}, document.title, window.location.pathname)
+    await authStore.updateSession()
+
+    toast.success('Payment successful! Your subscription has been updated')
   } else if (urlParams.get('canceled') === 'true') {
     showPaymentResult.value = true
     paymentSuccess.value = false
-    paymentMessage.value = 'Payment was canceled. No charges were made to your account.'
+    paymentMessage.value = 'Payment was canceled. No charges were made to your account'
 
     toast.info('Payment was canceled. You can try again anytime.')
-
-    // Clean up URL
-    window.history.replaceState({}, document.title, window.location.pathname)
   }
+  window.history.replaceState({}, document.title, window.location.pathname)
 })
+
+const showUpgradeConfirmation = (planName: string) => {
+  pendingPlanName.value = planName as SubscriptionPlan
+
+  if (planName === 'Premium' && currentPlan.value?.name === 'Pro') {
+    upgradeDialogTitle.value = 'Upgrade to Premium?'
+    upgradeDialogDescription.value =
+      'You will become Premium immediately and will be charged the difference between your current plan and the Premium plan at the next billing cycle.'
+  } else if (planName === 'Pro' && currentPlan.value?.name === 'Premium') {
+    upgradeDialogTitle.value = 'Downgrade to Pro?'
+    upgradeDialogDescription.value =
+      'You will keep being Premium until the end of your current billing cycle, but you will be charged the Pro plan at the next billing cycle.'
+  } else if (planName === 'Free') {
+    upgradeDialogTitle.value = 'Downgrade to Free?'
+    upgradeDialogDescription.value =
+      'You will keep your current plan until the end of your current billing cycle.'
+  } else {
+    // Direct upgrade from Free
+    upgradeDialogTitle.value = `Upgrade to ${planName}?`
+    upgradeDialogDescription.value = `You will be redirected to checkout to complete your ${planName} subscription.`
+  }
+
+  showUpgradeDialog.value = true
+}
+
+const confirmUpgrade = async () => {
+  showUpgradeDialog.value = false
+
+  if (pendingPlanName.value) {
+    await handleUpgrade(pendingPlanName.value)
+  }
+}
 
 const handleUpgrade = async (planName: string) => {
   isLoading.value = true
   try {
-    let result
-    if (planName == 'Premium' && currentPlan.value?.name === 'Pro') {
-      result = window.confirm(
-        'Are you sure you want to upgrade from Pro to Premium? \nYou will become Premium inmediately and will be charged the difference between your current plan and the Premium plan at next billing cycle',
-      )
-    } else if (planName == 'Pro' && currentPlan.value?.name === 'Premium') {
-      result = window.confirm(
-        'Are you sure you want to downgrade from Premium to Pro? \nYou will keep being Premium until the end of your current billing cycle, but you will be charged the Pro plan at next billing cycle',
-      )
-    } else if (planName == 'Free') {
-      result = window.confirm(
-        'Are you sure you want to downgrade to Free plan? \nYou will keep your current plan until the end of your current billing cycle.',
-      )
-    } else {
-      result = true
-    }
-    if (result) {
-      if (planName == 'Free') {
-        const { data, error } = await useFetch('/api/stripe/cancel', {
-          method: 'POST',
-          credentials: 'include',
-        }).json()
-        if (error.value) {
-          throw new Error(data.value.message ?? 'Failed to cancel subscription')
-        }
-        toast.info(
-          'Successfully canceled subscription. You will be downgraded to Free plan at the end of your current billing cycle.',
-        )
-      } else if (currentPlan.value?.name === 'Free') {
-        const checkoutPayload = {
-          product: planName,
-          successUrl: `${window.location.origin}/dashboard/subscription?success=true`,
-          cancelUrl: `${window.location.origin}/dashboard/subscription?canceled=true`,
-          userId: authStore.session?.id,
-        }
-        const { data, error } = await useFetch('/api/stripe/checkout', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify(checkoutPayload),
-        }).json()
+    if (planName === 'Free') {
+      const { data, error } = await useFetch('/api/stripe/cancel', {
+        method: 'POST',
+        credentials: 'include',
+      }).json()
+      if (error.value) {
+        throw new Error(data.value.message ?? 'Failed to cancel subscription')
+      }
 
-        if (error.value) {
-          throw new Error(data.value.message ?? 'Failed to create checkout session')
-        }
+      paymentSuccess.value = true
+      paymentMessage.value =
+        'Successfully canceled subscription. You will be downgraded to Free plan at the end of your current billing cycle.'
+    } else if (currentPlan.value?.name === 'Free' || currentPlan.value?.name !== planName) {
+      const checkoutPayload = {
+        product: planName,
+        successUrl: `${window.location.origin}/dashboard/subscription?success=true`,
+        cancelUrl: `${window.location.origin}/dashboard/subscription?canceled=true`,
+        userId: authStore.session?.id,
+      }
+      const { data, error } = await useFetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(checkoutPayload),
+      }).json()
 
-        if (data.value.url) {
-          window.location.href = data.value.url
-        } else {
-          throw new Error('No checkout URL received')
-        }
+      if (error.value) {
+        throw new Error(data.value.message ?? 'Failed to create checkout session')
+      }
+
+      if (data.value.url) {
+        window.location.href = data.value.url
       } else {
-        const checkoutPayload = {
-          product: planName,
-          successUrl: `${window.location.origin}/dashboard/subscription?success=true`,
-          cancelUrl: `${window.location.origin}/dashboard/subscription?canceled=true`,
-          userId: authStore.session?.id,
-        }
-        const { data, error } = await useFetch('/api/stripe/checkout', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify(checkoutPayload),
-        }).json()
-
-        if (error.value) {
-          throw new Error(data.value.message ?? 'Failed to create checkout session')
-        }
-        toast.info('Successfully started upgrade/downgrade process')
-        await authStore.checkSession()
-        await bucketStore.loadSubscriptionUsage()
+        throw new Error('No checkout URL received')
       }
     }
+
+    await authStore.updateSession()
+    await bucketStore.loadSubscriptionUsage()
   } catch (error) {
-    console.error('Upgrade error:', error)
-    toast.error(error instanceof Error ? error.message : 'Failed to start upgrade process')
+    console.error('Error upgrading subscription:', error)
+    toast.error(error instanceof Error ? error.message : 'Failed to upgrade subscription')
   } finally {
     isLoading.value = false
   }
@@ -189,14 +196,14 @@ const canDowngrade = (planName: string) => {
 
       <div class="flex items-center gap-2">
         <Badge
-          variant="outline"
+          variant="neutral"
           class="text-sm px-3 py-1"
           :class="
             currentPlan?.name === 'Premium'
               ? 'border-yellow-500 text-yellow-700'
               : currentPlan?.name === 'Pro'
                 ? 'border-blue-500 text-blue-700'
-                : 'border-gray-500 text-gray-700'
+                : ''
           "
         >
           <Crown v-if="currentPlan?.name === 'Premium'" class="size-3 mr-1" />
@@ -210,26 +217,25 @@ const canDowngrade = (planName: string) => {
     <!-- Payment Result Card -->
     <Card
       v-if="showPaymentResult"
-      class="bg-green-50"
       :class="paymentSuccess ? 'border-green-500 ' : 'border-red-500 '"
     >
       <CardContent>
         <div class="flex items-center justify-between">
           <!-- Success State -->
-          <div v-if="paymentSuccess" class="flex items-center gap-3">
-            <CheckCircle class="text-green-500 size-8" />
+          <div v-if="paymentSuccess" class="flex items-center gap-3 text-green-500">
+            <CheckCircle class="size-8" />
             <div>
-              <h3 class="text-lg font-semibold text-green-800">Payment Successful!</h3>
-              <p class="text-green-500">{{ paymentMessage }}</p>
+              <h3 class="text-lg font-semibold">Payment Successful!</h3>
+              <p>{{ paymentMessage }}</p>
             </div>
           </div>
 
           <!-- Error State -->
-          <div v-else class="flex items-center gap-3">
-            <XCircle class="text-red-500 size-8" />
+          <div v-else class="flex items-center gap-3 text-red-500">
+            <XCircle class="size-8" />
             <div>
-              <h3 class="text-lg font-semibold text-red-800">Payment Canceled</h3>
-              <p class="text-red-500">{{ paymentMessage }}</p>
+              <h3 class="text-lg font-semibold">Payment Canceled</h3>
+              <p>{{ paymentMessage }}</p>
             </div>
           </div>
 
@@ -280,7 +286,8 @@ const canDowngrade = (planName: string) => {
             <span class="text-sm text-foreground/70">{{ storagePercentage.toFixed(1) }}% used</span>
             <span
               v-if="isStorageWarning"
-              class="text-red-500 flex items-center gap-1 text-sm font-medium"
+              class="flex items-center gap-1 text-sm font-medium"
+              :class="isStorageCritical ? 'text-red-500' : 'text-yellow-700 dark:text-yellow-700'"
             >
               <AlertCircle class="size-4" />
               {{ isStorageCritical ? 'Storage almost full!' : 'Storage running low' }}
@@ -294,8 +301,8 @@ const canDowngrade = (planName: string) => {
           class="p-4 rounded-base border-2"
           :class="
             isStorageCritical
-              ? 'bg-red-50 border-red-200 text-red-800'
-              : 'bg-yellow-50 border-yellow-200 text-yellow-800'
+              ? ' bg-secondary-background border-red-200 text-red-700 dark:text-red-500'
+              : ' bg-secondary-background border-yellow-200 text-yellow-700 dark:text-yellow-500'
           "
         >
           <div class="flex items-start gap-3">
@@ -331,14 +338,16 @@ const canDowngrade = (planName: string) => {
           :key="plan.name"
           class="border-2 border-border rounded-base shadow-shadow relative transition-all duration-200"
           :class="[
-            plan.name === currentPlan?.name ? 'ring-2 ring-main bg-main/5' : 'hover:shadow-lg',
             plan.popular ? 'scale-105 border-blue-500' : '',
             plan.name === 'Premium' ? 'border-yellow-500' : '',
           ]"
         >
           <!-- Popular Badge -->
           <div v-if="plan.popular" class="absolute -top-3 left-1/2 transform -translate-x-1/2">
-            <Badge class="bg-blue-500 text-white">Most Popular</Badge>
+            <Badge class="bg-blue-500 text-white">
+              <Star />
+              Most Popular
+            </Badge>
           </div>
 
           <!-- Premium Badge -->
@@ -346,8 +355,8 @@ const canDowngrade = (planName: string) => {
             v-if="plan.name === 'Premium'"
             class="absolute -top-3 left-1/2 transform -translate-x-1/2"
           >
-            <Badge class="bg-yellow-500 text-white">
-              <Crown class="size-3 mr-1" />
+            <Badge class="bg-yellow-700 text-white">
+              <Crown />
               Premium
             </Badge>
           </div>
@@ -386,26 +395,48 @@ const canDowngrade = (planName: string) => {
             </div>
 
             <!-- Action Button -->
-            <Button
-              v-else
-              @click="handleUpgrade(plan.name)"
-              :disabled="isLoading || (!canUpgrade(plan.name) && !canDowngrade(plan.name))"
-              class="w-full"
-              :variant="
-                plan.name === 'Pro' ? 'default' : plan.name === 'Premium' ? 'default' : 'neutral'
-              "
-              :class="plan.name === 'Premium' ? 'bg-yellow-500 hover:bg-yellow-600' : ''"
-            >
-              <Loader2 v-if="isLoading" class="size-4 mr-2 animate-spin" />
-              <template v-if="canUpgrade(plan.name)"> Upgrade to {{ plan.name }} </template>
-              <template v-else-if="canDowngrade(plan.name)">
-                Downgrade to {{ plan.name }}
-              </template>
-              <template v-else> {{ plan.name }} Plan </template>
-            </Button>
+            <AlertDialog v-else>
+              <AlertDialogTrigger as-child>
+                <Button
+                  @click="showUpgradeConfirmation(plan.name)"
+                  :disabled="isLoading || (!canUpgrade(plan.name) && !canDowngrade(plan.name))"
+                  class="w-full"
+                  :variant="
+                    plan.name === 'Pro'
+                      ? 'default'
+                      : plan.name === 'Premium'
+                        ? 'default'
+                        : 'neutral'
+                  "
+                  :class="plan.name === 'Premium' ? 'bg-yellow-500 hover:bg-yellow-600' : ''"
+                >
+                  <Loader2 v-if="isLoading" class="size-4 mr-2 animate-spin" />
+                  <template v-if="canUpgrade(plan.name)"> Upgrade to {{ plan.name }} </template>
+                  <template v-else-if="canDowngrade(plan.name)">
+                    Downgrade to {{ plan.name }}
+                  </template>
+                  <template v-else> {{ plan.name }} Plan </template>
+                </Button>
+              </AlertDialogTrigger>
+            </AlertDialog>
           </CardContent>
         </Card>
       </div>
     </div>
+
+    <AlertDialog v-model:open="showUpgradeDialog">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{{ upgradeDialogTitle }}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {{ upgradeDialogDescription }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction @click="confirmUpgrade"> Continue </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>

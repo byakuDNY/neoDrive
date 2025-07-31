@@ -22,11 +22,12 @@ export const useBucketStore = defineStore('bucket', () => {
       })
 
       const result = await response.json()
-      console.log('Subscription usage:', result)
       if (!response.ok) {
+        console.error('Failed to load subscription info:', result.message)
         throw new Error(result.message)
       }
 
+      console.log('Loaded subscription info:', result.data)
       subscriptionUsage.value = result.data
     } catch (error) {
       console.error('Failed to load subscription info:', error)

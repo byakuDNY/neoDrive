@@ -1,6 +1,6 @@
 import type { Component } from 'vue'
 
-type SubscriptionPlan = 'Free' | 'Pro' | 'Premium'
+export type SubscriptionPlan = 'Free' | 'Pro' | 'Premium'
 export type User = {
   id: string
   name: string

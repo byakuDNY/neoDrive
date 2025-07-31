@@ -5,7 +5,7 @@ import LoginAdmin from '@/views/admin/LoginAdmin.vue'
 import CategoryView from '@/views/dashboard/CategoryView.vue'
 import DashboardView from '@/views/dashboard/DashboardView.vue'
 import ProfileView from '@/views/dashboard/ProfileView.vue'
-import SubcriptionView from '@/views/dashboard/SubcriptionView.vue'
+import SubscriptionView from '@/views/dashboard/SubscriptionView.vue'
 import HomeView from '@/views/HomeView.vue'
 import LoginView from '@/views/LoginView.vue'
 import SignupView from '@/views/SignupView.vue'
@@ -86,7 +86,7 @@ const router = createRouter({
         {
           path: 'subscription',
           name: 'Subscription',
-          component: SubcriptionView,
+          component: SubscriptionView,
         },
         {
           path: 'profile',

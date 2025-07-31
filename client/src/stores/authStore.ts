@@ -28,10 +28,10 @@ export const useAuthStore = defineStore(
       adminSession.value = null
     }
 
-    const checkSession = async () => {
+    const updateSession = async () => {
       try {
         const userId = session.value?.id
-        const { error, data: updatedName } = await useFetch(`/api/auth/me/${userId}`, {
+        const { error, data: updatedData } = await useFetch(`/api/auth/me/${userId}`, {
           credentials: 'include',
         }).json()
 
@@ -40,12 +40,8 @@ export const useAuthStore = defineStore(
           return
         }
 
-        if (session.value) {
-          setSession({
-            ...session.value,
-            name: updatedName.value,
-          })
-        }
+        console.log('Session updated:', updatedData.value)
+        setSession(updatedData.value)
       } catch (error) {
         console.error('Session check error:', error)
         clearSession()
@@ -61,7 +57,7 @@ export const useAuthStore = defineStore(
       setAdminSession,
       clearSession,
       clearAdminSession,
-      checkSession,
+      updateSession,
     }
   },
   {
