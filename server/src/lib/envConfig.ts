@@ -5,7 +5,7 @@ config();
 
 const envSchema = z.object({
   SERVER_URL: z.url().default("http://localhost:3000"),
-  SERVER_PORT: z.number().default(3000),
+  SERVER_PORT: z.coerce.number().default(3000),
   MONGODB_URL: z.url().min(1, "MONGO_URL field is required"),
   S3_ACCESS_KEY: z.string().min(1, "S3_ACCESS_KEY field is required"),
   S3_SECRET_KEY: z.string().min(1, "S3_SECRET_KEY field is required"),

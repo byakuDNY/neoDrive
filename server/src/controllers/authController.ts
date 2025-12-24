@@ -7,7 +7,7 @@ import {
   createAdminSession,
   createSession,
 } from "../lib/session";
-import { stripeClient } from "../lib/stripe";
+// import { stripeClient } from "../lib/stripe";
 import {
   comparePassword,
   generateSalt,
@@ -99,19 +99,20 @@ export const handleSignup = async (
     const randomSalt = generateSalt();
     const hashedPassword = hashPassword(data.password, randomSalt);
 
-    const stripeCustomer = await stripeClient.customers.create({
-      email: data.email,
-      name: data.name,
-    });
-    if (!stripeCustomer.id) {
-      return reply
-        .status(500)
-        .send({ message: "Failed to create Stripe customer" });
-    }
+    // const stripeCustomer = await stripeClient.customers.create({
+    //   email: data.email,
+    //   name: data.name,
+    // });
+    // if (!stripeCustomer.id) {
+    //   return reply
+    //     .status(500)
+    //     .send({ message: "Failed to create Stripe customer" });
+    // }
 
     await User.create({
       id: `${data.name}_${ulid()}`,
-      stripeCustomerId: stripeCustomer.id,
+      // stripeCustomerId: stripeCustomer.id,
+      stripeCustomerId: `${data.name}_${ulid()}`,
       name: data.name,
       email: data.email,
       password: hashedPassword,
